@@ -9,8 +9,8 @@
 | Integrante | Código    |
 |---|-----------|
 | Ayala Vega, Valeria | 202310180 |
-| Cadenas Hidalgo, Anthony Cadenas | 202510031 |
-| Ramos Calderón, Mary Sofía | — |
+| Cadenas Hidalgo, Anthony Darian | 202510031 |
+| Ramos Calderón, Mary Sofía | 202510158 |
 | Rodrigo Corzo, Ernesto | 202310441 |
 | Rojas Llanos, Sergio | 202410758 |
 
@@ -66,7 +66,7 @@ El tercero es el que convierte esto en un problema de backend y no de catálogo.
 
 ### Funcionalidades Implementadas
 
-**Gestión de empresas y usuarios.** Alta de empresas con RUC y email únicos; cada una agrupa usuarios con tres roles (`ADMIN`, `MANAGER`, `OPERATOR`). Contraseñas con BCrypt, nunca expuestas. Una regla impide dejar a una empresa sin administrador y la baja es lógica, para preservar el historial.
+**Gestión de empresas y usuarios.** Alta de empresas con RUC y email únicos; cada una agrupa usuarios con tres roles (`ADMIN`, `MANAGER`, `OPERATOR`). Las contraseñas se guardan con BCrypt y nunca salen en las respuestas. Una regla impide dejar a una empresa sin administrador, y la baja es lógica para preservar el historial.
 
 **Catálogo de maquinaria.** Marca, modelo, año, serie única, tarifas, depósito, imágenes y ubicación. Cada equipo admite múltiples categorías (N:M).
 
@@ -86,35 +86,10 @@ El tercero es el que convierte esto en un problema de backend y no de catálogo.
 | Framework | Spring Boot 4.1.1 (Web MVC, Data JPA, Security, Validation) |
 | Persistencia | PostgreSQL 16 + Hibernate |
 | Documentación | springdoc-openapi 3.1.0 (Swagger UI) |
-| Correo | JavaMailSender + Thymeleaf, Mailpit como SMTP local |
 | Testing | JUnit 5, Spring Boot Test, AssertJ, H2 en modo PostgreSQL |
 | Build | Maven (wrapper incluido) |
 | Contenedores | Docker + Docker Compose |
 | Utilidades | Lombok, SLF4J |
-
-### Arquitectura del sistema
-
-```mermaid
-flowchart TB
-    FE["Cliente<br/>Frontend / Postman"]
-    subgraph API["Backend Spring Boot"]
-        JWT["JwtAuthenticationFilter<br/>valida el token"]
-        CTRL["Controllers<br/>/api/v1 + HATEOAS"]
-        SVC["Services<br/>reglas de negocio"]
-        POL["ReservationStatusPolicy<br/>maquina de estados"]
-        REPO["Repositories<br/>Spring Data JPA"]
-        LIS["NotificationListener<br/>@Async AFTER_COMMIT"]
-        MAIL["EmailService<br/>Thymeleaf"]
-    end
-    DB[("PostgreSQL<br/>lock pesimista")]
-    SMTP["SMTP<br/>Mailpit en local"]
-
-    FE -->|Bearer token| JWT --> CTRL --> SVC --> REPO --> DB
-    SVC --> POL
-    SVC -.->|publica evento| LIS --> MAIL --> SMTP
-```
-
-El camino sólido es sincrónico y responde al cliente; el punteado corre tras el commit en otro hilo, sin afectar al tiempo de respuesta ni a la transacción.
 
 ## 4. Modelo de Entidades
 
@@ -158,7 +133,7 @@ Todos los recursos cuelgan de `/api/v1/`, en plural, con verbos HTTP semánticos
 
 Códigos utilizados: `200` en lecturas y actualizaciones, `201` con cabecera `Location` en creaciones, `204` en bajas, `400` en validación, `401` sin token válido, `403` por rol insuficiente o recurso ajeno, `404` cuando no existe, `409` en conflictos (duplicados, overbooking, transición inválida) y `500` como red de seguridad.
 
-**Hipermedia.** Las respuestas individuales de empresas, maquinaria y reservas van envueltas en un `EntityModel` con sus enlaces en `_links`. En una reserva los enlaces de transición **dependen del estado**: `confirmation` y `cancellation` solo aparecen si la máquina de estados permite esa transición, así el cliente descubre lo que puede hacer leyendo la respuesta. Se construyen en ensambladores dedicados (`hateoas/`), no en los controladores.
+**Hipermedia.** Las respuestas individuales de empresas, maquinaria y reservas viajan envueltas en un `EntityModel` y llevan sus enlaces en `_links`: `self` más las colecciones que cuelgan del recurso. En una reserva, además, los enlaces de transición **dependen de su estado**: `confirmation` y `cancellation` solo aparecen cuando la máquina de estados permite esa transición, de modo que el cliente descubre lo que puede hacer leyendo la respuesta en vez de replicar las reglas. Los enlaces se construyen en ensambladores dedicados (`hateoas/`), no en los controladores, que siguen limitándose a delegar.
 
 ## 6. Manejo de Errores
 
@@ -174,23 +149,17 @@ El cuerpo es siempre el mismo `ErrorResponse`: `timestamp`, `status`, `error`, `
 
 **Prevención de vulnerabilidades.** Contra **inyección SQL**, todo el acceso a datos pasa por Spring Data JPA con consultas parametrizadas (`@Param`); no hay concatenación de strings en ninguna query. Contra **XSS**, la API responde exclusivamente JSON y `spring.web.resources.add-mappings=false` desactiva el servido de estáticos. Contra **CSRF**, la protección se desactiva deliberadamente porque la sesión es `STATELESS`: no hay cookie que un tercero pueda reutilizar. **CORS** está restringido por patrón de origen (`localhost` y `*.vercel.app`). La validación opera en dos capas: `@Valid` sobre los DTOs y constraints de columna en las entidades, de forma que ni una escritura directa pueda violar las invariantes.
 
-**Autenticación con JWT.** `POST /api/v1/auth/register` da de alta empresa y administrador en una transacción; `/auth/login` devuelve access y refresh token firmados con HMAC-SHA256, con los claims `userId`, `email`, `companyId` y `role`. `JwtAuthenticationFilter` extrae el token de `Authorization: Bearer`, lo valida y puebla el `SecurityContext`; si falta o es inválido, el `AuthenticationEntryPoint` responde 401 con el `ErrorResponse` de siempre. La clave sale de `JWT_SECRET`. `/auth/refresh` recarga al usuario desde la base en lugar de confiar en el token, para que una baja o un cambio de rol surtan efecto de inmediato.
+**Autenticación con JWT.** `POST /api/v1/auth/register` da de alta una empresa y su administrador en una sola transacción; `POST /api/v1/auth/login` devuelve access token y refresh token firmados con HMAC-SHA256, con los claims `userId`, `email`, `companyId` y `role`. `JwtAuthenticationFilter`, un `OncePerRequestFilter`, extrae el token de `Authorization: Bearer`, lo valida y puebla el `SecurityContext`; si falta o es inválido el `AuthenticationEntryPoint` responde 401 con el mismo `ErrorResponse` del resto de la API. La clave se lee de `JWT_SECRET`. `POST /api/v1/auth/refresh` recarga al usuario desde la base de datos en lugar de confiar en el token, para que una baja o un cambio de rol surtan efecto de inmediato.
 
-**Autorización en dos niveles.** El rol se comprueba con `@PreAuthorize` en los controladores (`@EnableMethodSecurity` activo): `ADMIN` gestiona usuarios y empresa, `ADMIN` y `MANAGER` publican maquinaria y confirman reservas, y cualquier autenticado reserva y reseña. La pertenencia del recurso se verifica aparte, en los servicios, que leen la identidad del `SecurityContext` vía `CurrentUser` y responden 403 ante un recurso ajeno. Dos preguntas distintas, en capas distintas.
+**Autorización en dos niveles.** El rol se comprueba con `@PreAuthorize` en los métodos sensibles de los controladores (`@EnableMethodSecurity` activo): `ADMIN` gestiona usuarios y empresa, `ADMIN` y `MANAGER` publican maquinaria y confirman reservas, y cualquier autenticado puede reservar y reseñar. La pertenencia del recurso se verifica aparte, en la capa de servicio, que lee la identidad del `SecurityContext` mediante el componente `CurrentUser` y responde 403 ante un recurso ajeno. Son dos preguntas distintas y se responden en capas distintas.
 
-La empresa arrendataria **nunca viaja en el cuerpo de la petición**: sale del token. De otro modo, cualquier autenticado podría reservar a nombre de otra empresa.
+La empresa arrendataria de una reserva **nunca viaja en el cuerpo de la petición**: sale del token. De otro modo, cualquier usuario autenticado podría reservar maquinaria a nombre de otra empresa.
 
 ## 8. Eventos y Asincronía
 
 La concurrencia crítica se resolvió de forma **deliberadamente sincrónica**: disponibilidad e inserción ocurren en una sola transacción con lock pesimista, porque el usuario necesita saber en la misma respuesta si obtuvo la máquina.
 
-Asíncrono es el trabajo posterior. `ReservationService` publica dos eventos con `ApplicationEventPublisher`: `ReservationCreatedEvent` al solicitarse y `ReservationStatusChangedEvent` en cada transición, con el estado anterior y el motivo.
-
-`ReservationNotificationListener` los consume con `@TransactionalEventListener(AFTER_COMMIT)` y `@Async`. Las dos anotaciones cargan toda la intención. **Tras el commit**, porque anunciar por correo una reserva que luego hizo rollback sería una inconsistencia visible. **Asíncrono**, porque la latencia del SMTP no debe sumarse al tiempo de respuesta ni una caída del correo impedir alquilar.
-
-Los eventos llevan un `ReservationSnapshot` inmutable, no la entidad: el listener corre fuera de la transacción, donde tocar una relación `LAZY` reventaría.
-
-`EmailService` compone HTML con Thymeleaf y envía por `JavaMailSender` sobre un `ThreadPoolTaskExecutor` propio con cola acotada; los fallos se registran y se descartan. En local, `docker compose` levanta Mailpit como SMTP de captura, legible en `http://localhost:8025`.
+La asincronía corresponde al trabajo posterior, y está diseñada sobre `@TransactionalEventListener(AFTER_COMMIT)` para tres casos: reserva creada, confirmada y cancelada. Publicar tras el commit evita anunciar por correo una reserva que luego hizo rollback, y `@Async` impide que la latencia del SMTP se sume al tiempo de respuesta. **Estado: `spring-boot-starter-mail` está declarado; los listeners y el `ThreadPoolTaskExecutor` siguen pendientes.**
 
 ## 9. Instalación y Ejecución Local
 
@@ -202,7 +171,7 @@ cd ProyectoBackend
 docker compose up -d --build
 ```
 
-Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authorize* para pegar el token, y los correos enviados se leen en Mailpit, en `http://localhost:8025`. Para detener: `docker compose down` (`-v` borra también los datos). La guía detallada está en [`GUIA_LEVANTAR_PROYECTO.md`](GUIA_LEVANTAR_PROYECTO.md). Las 19 pruebas se ejecutan con `./mvnw test` sobre H2, sin contenedores.
+Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authorize* para pegar el token. Para detener: `docker compose down` (`-v` borra también los datos). La guía detallada está en [`GUIA_LEVANTAR_PROYECTO.md`](GUIA_LEVANTAR_PROYECTO.md). Las 19 pruebas se ejecutan con `./mvnw test` sobre H2, sin contenedores.
 
 **Variables de entorno:**
 
@@ -216,9 +185,6 @@ Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authori
 | `JWT_SECRET` | clave de desarrollo | Clave de firma de los tokens, mínimo 32 bytes. **Obligatorio en producción** |
 | `JWT_ACCESS_MINUTES` | `60` | Vigencia del access token |
 | `JWT_REFRESH_DAYS` | `7` | Vigencia del refresh token |
-| `MAIL_HOST` / `MAIL_PORT` | `localhost` / `1025` | SMTP. En Docker apunta a Mailpit |
-| `MAIL_ENABLED` | `true` | `false` desactiva el envío y solo registra |
-| `MAIL_FROM` | `no-reply@rentequip.pe` | Remitente de las notificaciones |
 
 ## 10. GitHub & Management
 
@@ -230,22 +196,22 @@ El trabajo se organiza en `sergio453LOL/ProyectoBackend` con Conventional Commit
 
 | | |
 |---|---|
-| **Implementado** | 7 entidades JPA · 24 DTOs + 7 mappers · Controller→Service→Repository · 9 excepciones + handler global · 7 controladores `/api/v1` · reserva con lock pesimista probada bajo concurrencia autenticada · búsqueda geoespacial paginada · JWT con refresh y roles con `@PreAuthorize` · HATEOAS · eventos de dominio con `@Async` y correo HTML · 29 pruebas en verde · Swagger con Bearer, Docker Compose, SLF4J |
-| **Pendiente** | deployment · GitHub Actions · GitHub Projects |
+| **Implementado** | 7 entidades JPA · 24 DTOs + 7 mappers · Controller→Service→Repository · 9 excepciones + handler global · 7 controladores `/api/v1` · reserva con lock pesimista probada bajo concurrencia autenticada · búsqueda geoespacial paginada · JWT con refresh y roles con `@PreAuthorize` · HATEOAS · 19 pruebas en verde · Swagger con Bearer, Docker Compose, SLF4J |
+| **Pendiente** | eventos `@Async` + servicio de correo · deployment · GitHub Actions · GitHub Projects |
 
 ## 11. Conclusión
 
 ### Logros del Proyecto
 
-El backend resuelve lo que identificamos como más difícil en la propuesta: **la disponibilidad bajo concurrencia**. `ReservationConcurrencyTest` lanza diez peticiones autenticadas simultáneas sobre la misma máquina y el mismo rango, y verifica que exactamente una sobreviva. También quedó resuelta la búsqueda por proximidad con ordenamiento por distancia, la otra incógnita técnica que declaramos al inicio. Sobre esa base se cerraron el módulo de seguridad —JWT, roles y aislamiento entre empresas— y el de notificaciones, con eventos de dominio que desacoplan el correo del flujo de reserva. Todo cubierto por 29 pruebas.
+El backend resuelve lo que identificamos como más difícil en la propuesta: **la disponibilidad bajo concurrencia**. `ReservationConcurrencyTest` lanza diez peticiones autenticadas simultáneas sobre la misma máquina y el mismo rango, y verifica que exactamente una sobreviva. También quedó resuelta la búsqueda por proximidad con ordenamiento por distancia, la otra incógnita técnica que declaramos al inicio. Sobre esa base se cerró el módulo de seguridad: autenticación con JWT, autorización por rol y aislamiento entre empresas, todo cubierto por pruebas de extremo a extremo.
 
 ### Aprendizajes Clave
 
-El aprendizaje central fue entender *dónde* colocar un lock. La primera intuición —bloquear las reservas existentes— falla, porque el conflicto lo produce una fila que aún no existe; bloquear la fila del equipo convierte el recurso disputado en el punto de serialización. `@Transactional` tampoco es magia: importan la isolation, el orden de las operaciones y que el lock se tome *antes* de leer aquello sobre lo que se decide.
+El aprendizaje central fue entender *dónde* colocar un lock. La primera intuición —bloquear las reservas existentes— es insuficiente, porque el conflicto lo produce una fila que aún no existe; bloquear la fila del equipo convierte el recurso disputado en el punto de serialización. También aprendimos que `@Transactional` no es magia: importan la isolation, el orden de las operaciones y que el lock se tome *antes* de leer aquello sobre lo que se decide.
 
 ### Trabajo Futuro
 
-Persistir los refresh tokens para poder revocarlos; encolar los correos en un broker para poder reintentarlos; migrar de `ddl-auto=update` a Flyway antes de producción; reemplazar Haversine en JPQL por PostGIS con índices GiST cuando el catálogo crezca; integrar Stripe para pagos y depósitos; y subir imágenes a S3 de forma asíncrona.
+Implementar los listeners transaccionales de correo con plantillas Thymeleaf; persistir los refresh tokens para poder revocarlos; migrar de `ddl-auto=update` a Flyway antes de producción; reemplazar Haversine en JPQL por PostGIS con índices GiST cuando el catálogo crezca; integrar Stripe para pagos y depósitos; y subir imágenes a S3 de forma asíncrona.
 
 ## 12. Apéndices
 
