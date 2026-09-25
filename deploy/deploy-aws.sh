@@ -15,7 +15,9 @@ set -euo pipefail
 
 # --------------------------------------------------------------------- parametros
 REGION="${AWS_REGION:-us-east-1}"
-INSTANCE_TYPE="${INSTANCE_TYPE:-t3.micro}"
+# t3.small (2 GB) y no t3.micro (1 GB): con 916 MB utiles, la JVM mas Hibernate
+# arrancando el esquema deja demasiado poco margen.
+INSTANCE_TYPE="${INSTANCE_TYPE:-t3.small}"
 APP_PORT=8080
 TAG="rentequip"
 
@@ -59,11 +61,23 @@ aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
   --protocol tcp --port "$APP_PORT" --cidr 0.0.0.0/0 --region "$REGION" >/dev/null
 echo "Security group: $SG_ID (puerto $APP_PORT abierto)"
 
+# La RDS no es publica. En lugar de abrirla a internet, se autoriza unicamente al
+# security group del backend, que es el minimo privilegio que hace falta.
+RDS_SG="${RDS_SG:-sg-0bf0c6c75c912183d}"
+say "Autorizando el acceso del backend a la RDS ($RDS_SG)"
+aws ec2 authorize-security-group-ingress --group-id "$RDS_SG"   --protocol tcp --port 5432 --source-group "$SG_ID" --region "$REGION" >/dev/null 2>&1   && echo "Regla anadida: 5432 desde $SG_ID"   || echo "La regla ya existia, se continua"
+
 # --------------------------------------------------------------------- 3. lanzar la instancia
 say "Buscando la AMI de Amazon Linux 2023"
-AMI_ID="$(aws ssm get-parameters \
-  --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
-  --query 'Parameters[0].Value' --output text --region "$REGION")"
+# Se resuelve con describe-images y no con el parametro publico de SSM: en Git Bash sobre
+# Windows, MSYS reescribe la ruta "/aws/service/..." como ruta de Windows y la consulta
+# devuelve None, lo que hace fallar run-instances con InvalidAMIID.Malformed.
+AMI_ID="$(aws ec2 describe-images --owners amazon \
+  --filters "Name=name,Values=al2023-ami-2023*-x86_64" "Name=state,Values=available" \
+  --query 'reverse(sort_by(Images,&CreationDate))[0].ImageId' \
+  --output text --region "$REGION")"
+[ -n "$AMI_ID" ] && [ "$AMI_ID" != "None" ] || die "No se pudo resolver la AMI"
+echo "AMI: $AMI_ID"
 
 JDBC_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
@@ -80,15 +94,19 @@ Description=RentEquip backend
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/java -jar /opt/rentequip/app.jar
+ExecStart=/usr/bin/java -Xms256m -Xmx768m -jar /opt/rentequip/app.jar
 Restart=always
 RestartSec=10
-Environment=DB_URL=$JDBC_URL
-Environment=DB_USERNAME=$DB_USER
-Environment=DB_PASSWORD=$DB_PASSWORD
-Environment=JWT_SECRET=$JWT_SECRET
-Environment=MAIL_ENABLED=false
-Environment=PORT=$APP_PORT
+# El log tambien va a la consola serie: es la unica forma de diagnosticar la app
+# desde fuera, porque la instancia se lanza sin par de claves y no admite SSH.
+StandardOutput=journal+console
+StandardError=journal+console
+Environment="DB_URL=$JDBC_URL"
+Environment="DB_USERNAME=$DB_USER"
+Environment="DB_PASSWORD=$DB_PASSWORD"
+Environment="JWT_SECRET=$JWT_SECRET"
+Environment="MAIL_ENABLED=false"
+Environment="PORT=$APP_PORT"
 
 [Install]
 WantedBy=multi-user.target
