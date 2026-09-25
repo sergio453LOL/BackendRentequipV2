@@ -15,7 +15,7 @@
 | Rojas Llanos, Sergio | 202410758 |
 
 **Repositorio:** https://github.com/sergio453LOL/BackendRentequipV2<br>
-**Deployment:** _pendiente (ver [Estado de la entrega](#estado-de-la-entrega))_
+**Deployment:** http://3.237.198.235:8080/swagger-ui.html
 
 ---
 
