@@ -17,6 +17,14 @@ services:
       timeout: 5s
       retries: 10
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: rentequip-mailpit
+    restart: "no"
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   backend:
     build: .
     container_name: rentequip-backend
@@ -24,10 +32,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       DB_URL: jdbc:postgresql://db:5432/rentequip
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
     ports:
       - "8080:8080"
 

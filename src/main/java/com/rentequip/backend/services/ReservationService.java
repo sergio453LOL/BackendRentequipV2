@@ -9,6 +9,9 @@ import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.Reservation;
 import com.rentequip.backend.enums.EquipmentStatus;
+import com.rentequip.backend.events.ReservationCreatedEvent;
+import com.rentequip.backend.events.ReservationSnapshot;
+import com.rentequip.backend.events.ReservationStatusChangedEvent;
 import com.rentequip.backend.enums.ReservationRole;
 import com.rentequip.backend.enums.ReservationStatus;
 import com.rentequip.backend.exceptions.EquipmentUnavailableException;
@@ -25,6 +28,7 @@ import com.rentequip.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,6 +51,7 @@ public class ReservationService {
 
     private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
 
+    private final ApplicationEventPublisher eventPublisher;
     private final CurrentUser currentUser;
     private final ReservationRepository reservationRepository;
     private final EquipmentRepository equipmentRepository;
@@ -70,6 +75,10 @@ public class ReservationService {
         log.info("Reservation {} created for equipment {} by company {} ({} to {})",
                 reservation.getId(), equipment.getId(), renter.getId(),
                 reservation.getStartDate(), reservation.getEndDate());
+
+        // Published inside the transaction but delivered after the commit: a rolled back booking
+        // must never generate a notification for a reservation that does not exist.
+        eventPublisher.publishEvent(new ReservationCreatedEvent(ReservationSnapshot.of(reservation)));
         return reservationMapper.toResponse(reservation);
     }
 
@@ -79,9 +88,13 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Reservation", reservationId));
 
+        ReservationStatus previousStatus = reservation.getStatus();
         statusPolicy.validateTransition(reservation, request.status(), actingCompanyId);
         applyStatusChange(reservation, request);
         log.info("Reservation {} moved to {} by company {}", reservationId, request.status(), actingCompanyId);
+
+        eventPublisher.publishEvent(new ReservationStatusChangedEvent(
+                ReservationSnapshot.of(reservation), previousStatus, request.reason()));
         return reservationMapper.toResponse(reservation);
     }
 

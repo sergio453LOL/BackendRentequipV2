@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{mail/_layout :: page(
+        'Nueva solicitud de alquiler',
+        'Hola ' + ${reservation.ownerCompanyName()} + ',',
+        ${reservation.renterCompanyName()} + ' quiere alquilar tu maquinaria. La solicitud ya bloquea esas fechas en el calendario, así que confírmala o recházala desde la plataforma.')}">
+</html>

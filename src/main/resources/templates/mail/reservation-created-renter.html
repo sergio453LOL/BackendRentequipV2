@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{mail/_layout :: page(
+        'Solicitud enviada',
+        'Hola ' + ${reservation.renterCompanyName()} + ',',
+        'Recibimos tu solicitud y ya está en manos de ' + ${reservation.ownerCompanyName()} + '. Te avisaremos en cuanto la confirme.')}">
+</html>

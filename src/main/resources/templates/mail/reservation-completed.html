@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{mail/_layout :: page(
+        'Alquiler finalizado',
+        'Hola ' + ${reservation.renterCompanyName()} + ',',
+        'El alquiler terminó. Ya puedes dejar una reseña sobre la maquinaria y el estado en que la recibiste.')}">
+</html>

@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{mail/_layout :: page(
+        'Reserva confirmada',
+        'Hola ' + ${reservation.renterCompanyName()} + ',',
+        ${reservation.ownerCompanyName()} + ' confirmó tu reserva. La maquinaria queda reservada para las fechas indicadas.')}">
+</html>
