@@ -8,7 +8,7 @@
 
 | Integrante | Código    |
 |---|-----------|
-| Ayala Vega, Valeria | 202310180 |
+| Ayala Vega, Valeria Isabel | 202310180 |
 | Cadenas Hidalgo, Anthony Darian | 202510031 |
 | Ramos Calderón, Mary Sofía | 202510158 |
 | Rodrigo Corzo, Ernesto | 202310441 |
