@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+// Formato de respuestas y DTOs actualizado
 
 public record EquipmentResponse(
         Long id,
