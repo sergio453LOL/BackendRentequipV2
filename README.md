@@ -222,7 +222,7 @@ Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authori
 
 **Control de versiones**. Usamos Convencional Commits (`feat(domain)`, `feat(persistence)`, `feat(security)`, `docs`), ramas por funcionalidad y Pull Request revisados por otro integrante antes de mercera a main. El `.gitignore` excluye `target/`, `.env` y la configuración del IDE: no hay credenciales en el historial.
 
-**GitHub Projects**. Las tareas se gestionan como Issues con labels por módulo, un milestone por entrega y un responsable asignado, organizados en un tablero de GitHub Projects (To do → In progress → Done). La lista inicial de issues está en `docs/github-issues.md`
+**Gestión de tareas.** Las tareas del proyecto se definieron como issues con etiquetas, responsable y milestone en `docs/github-issues.md`, y se coordinaron mediante ramas por funcionalidad y Pull Requests.
 
 **GitHub Actions**. El workflow `.github/workflows/ci.yml` se ejecuta en cada push y Pull Request: prepara Java 21 y corre `./mvnw -B verify`, que compila y ejecuta toda la suite de pruebas, incluida la de concurrencia. Así ningún cambio que rompa las pruebas llega a main sin que el PR lo muestre.
 
