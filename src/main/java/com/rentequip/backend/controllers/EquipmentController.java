@@ -61,7 +61,7 @@ public class EquipmentController {
         return ResponseEntity.created(location).body(equipmentAssembler.toModel(created));
     }
 
-    // Ajustes finales en controladores
+// Ajustes finales en controladores
     @GetMapping("/{id}")
     public ResponseEntity> findById(@PathVariable Long id) {
         return ResponseEntity.ok(equipmentAssembler.toModel(equipmentService.findById(id)));
