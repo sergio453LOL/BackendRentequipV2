@@ -56,11 +56,11 @@ El sector construcción peruano está dominado por contratistas pequeños y medi
 
 ### Descripción del Problema
 
-Un contratista que necesita una retroexcavadora por doce días puede comprarla (capital muerto entre obra y obra) o alquilarla a un proveedor tradicional a tarifas que asumen intermediación. Mientras tanto, otra constructora a quince kilómetros tiene esa misma máquina parada. No existe canal que los conecte porque el alquiler entre empresas exige resolver tres problemas: saber **qué hay cerca**, **si está libre en las fechas exactas** y garantizar que la reserva sea **firme**.
+Un contratista que necesita una retroexcavadora por doce días puede comprarla (capital muerto entre obra y obra) o alquilarla a un proveedor tradicional con tarifas infladas por la intermediación. Mientras tanto, otra constructora tiene esa misma máquina parada. No existe canal que los conecte porque el alquiler entre empresas exige resolver tres problemas: saber **qué hay cerca**, **si está libre en las fechas exactas** y que la reserva sea **firme**.
 
 ### Justificación
 
-El tercero es el que convierte esto en un problema de backend y no de catálogo. Si dos contratistas reservan la misma excavadora para la misma semana, alguien llega a la obra y la máquina no está. Entre el "está libre" y el "reservado" hay una ventana por la que otra petición puede colarse, así que tratamos el overbooking como una invariante de base de datos, no como una validación de formulario.
+Lo tercero convierte esto en un problema de backend. Si dos contratistas reservan la misma excavadora para la misma semana, alguien llega a la obra y la máquina no está. Entre el "está libre" y el "reservado" hay una ventana por la que otra petición puede colarse, así que tratamos el overbooking como una invariante de base de datos, no como una validación de formulario.
 
 ## 3. Descripción de la Solución
 
@@ -72,9 +72,9 @@ El tercero es el que convierte esto en un problema de backend y no de catálogo.
 
 **Búsqueda por proximidad.** `GET /api/v1/equipment/search` implementa Haversine en JPQL: calcula kilómetros entre el origen y cada equipo, filtra por radio y **ordena por cercanía**. Los demás filtros son opcionales; `null` desactiva el predicado. Con fechas, un `NOT EXISTS` excluye los equipos con reservas solapadas, así el catálogo solo muestra lo reservable.
 
-**Reservas sin overbooking.** El núcleo del proyecto. Al crear una reserva, el servicio abre una transacción `READ_COMMITTED` y lo primero que hace es tomar un **lock pesimista** (`SELECT ... FOR UPDATE`, timeout de 5 s) sobre la fila del equipo. Ese lock es el punto de serialización: dos peticiones concurrentes se encolan ahí, así que la comprobación de solapamiento nunca corre en paralelo. Bloquear la tabla de reservas no bastaría, porque **las filas que todavía no existen no se pueden bloquear**. Con el lock tomado se valida el rango de fechas, que el equipo sea alquilable, que el arrendatario no sea el dueño y que no haya solapamiento; recién entonces se inserta. La segunda petición recibe `409 OVERBOOKING`.
+**Reservas sin overbooking.** El núcleo del proyecto. Al crear una reserva, el servicio abre una transacción `READ_COMMITTED` y toma un **lock pesimista** (`SELECT ... FOR UPDATE`, timeout de 5 s) sobre la fila del equipo. Ese lock serializa dos peticiones concurrentes: bloquear la tabla de reservas no bastaría, porque **las filas que todavía no existen no se pueden bloquear**. Con el lock tomado se valida el rango de fechas, que el equipo sea alquilable, que el arrendatario no sea el dueño y que no haya solapamiento; recién entonces se inserta. La segunda petición recibe `409 OVERBOOKING`.
 
-**Ciclo de vida de la reserva.** `ReservationStatusPolicy` concentra la máquina de estados (`PENDING → CONFIRMED → IN_PROGRESS → COMPLETED`, con `CANCELLED` y `REJECTED` como salidas) y quién puede activar cada transición: confirmar, rechazar, iniciar y completar son del dueño; cancelar, de ambas partes. Al confirmar se revalida la disponibilidad bajo lock y el estado del equipo se sincroniza solo.
+**Ciclo de vida de la reserva.** `ReservationStatusPolicy` concentra la máquina de estados (`PENDING → CONFIRMED → IN_PROGRESS → COMPLETED`, con `CANCELLED` y `REJECTED` como salidas) y quién puede ejecutar cada transición.
 
 **Reseñas verificadas.** Solo el arrendatario de una reserva `COMPLETED` puede reseñarla, y solo una vez. **Extras:** paginación en todos los listados, Swagger UI, logging con SLF4J y Docker Compose.
 
@@ -114,7 +114,7 @@ flowchart TB
     SVC -.->|publica evento| LIS --> MAIL --> SMTP
 ```
 
-El camino sólido es sincrónico y responde al cliente; el punteado corre tras el commit en otro hilo, sin afectar al tiempo de respuesta ni a la transacción.
+El camino sólido es sincrónico; el punteado corre tras el commit en otro hilo, sin afectar al tiempo de respuesta ni a la transacción.
 
 ## 4. Modelo de Entidades
 
@@ -176,9 +176,7 @@ El cuerpo es siempre el mismo `ErrorResponse`: `timestamp`, `status`, `error`, `
 
 **Autenticación con JWT.** `POST /api/v1/auth/register` da de alta empresa y administrador en una transacción; `/auth/login` devuelve access y refresh token firmados con HMAC-SHA256, con los claims `userId`, `email`, `companyId` y `role`. `JwtAuthenticationFilter` extrae el token de `Authorization: Bearer`, lo valida y puebla el `SecurityContext`; si falta o es inválido, el `AuthenticationEntryPoint` responde 401 con el `ErrorResponse` de siempre. La clave sale de `JWT_SECRET`. `/auth/refresh` recarga al usuario desde la base en lugar de confiar en el token, para que una baja o un cambio de rol surtan efecto de inmediato.
 
-**Autorización en dos niveles.** El rol se comprueba con `@PreAuthorize` en los controladores (`@EnableMethodSecurity` activo): `ADMIN` gestiona usuarios y empresa, `ADMIN` y `MANAGER` publican maquinaria y confirman reservas, y cualquier autenticado reserva y reseña. La pertenencia del recurso se verifica aparte, en los servicios, que leen la identidad del `SecurityContext` vía `CurrentUser` y responden 403 ante un recurso ajeno. Dos preguntas distintas, en capas distintas.
-
-La empresa arrendataria **nunca viaja en el cuerpo de la petición**: sale del token. De otro modo, cualquier autenticado podría reservar a nombre de otra empresa.
+**Autorización en dos niveles.** El rol se comprueba con `@PreAuthorize` en los controladores (`@EnableMethodSecurity` activo): `ADMIN` gestiona usuarios y empresa, `ADMIN` y `MANAGER` publican maquinaria y confirman reservas, y cualquier autenticado reserva y reseña. La pertenencia del recurso se verifica aparte, en los servicios, que leen la identidad del `SecurityContext` vía `CurrentUser` y responden 403 ante un recurso ajeno. La empresa arrendataria **nunca viaja en el cuerpo**: sale del token.
 
 ## 8. Eventos y Asincronía
 
@@ -222,16 +220,11 @@ Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authori
 
 ## 10. GitHub & Management
 
-El trabajo se organiza en `sergio453LOL/ProyectoBackend` con Conventional Commits que agrupan una capa por commit (`feat(domain)`, `feat(persistence)`, `feat(security)`, `test`), de modo que el historial se lee como la construcción incremental de la arquitectura. El trabajo se reparte en ramas de feature descritas en `docs/agents/`, cada una dueña de un conjunto de archivos para evitar colisiones. El `.gitignore` excluye `target/`, `.env` y la configuración del IDE: no hay credenciales en el historial.
+**Control de versiones**. Usamos Convencional Commits (`feat(domain)`, `feat(persistence)`, `feat(security)`, `docs`), ramas por funcionalidad y Pull Request revisados por otro integrante antes de mercera a main. El `.gitignore` excluye `target/`, `.env` y la configuración del IDE: no hay credenciales en el historial.
 
-**Pendiente:** el tablero de GitHub Projects con issues, labels y milestones, y el workflow de GitHub Actions. El flujo previsto es un job que ejecute `./mvnw -B verify` en cada push y pull request a `main` —con PostgreSQL como service container— y otro que construya la imagen Docker al mergear, para que ningún cambio que rompa las pruebas de concurrencia llegue a la rama principal.
+**GitHub Projects**. Las tareas se gestionan como Issues con labels por módulo, un milestone por entrega y un responsable asignado, organizados en un tablero de GitHub Projects (To do → In progress → Done). La lista inicial de issues está en `docs/github-issues.md`
 
-## Estado de la entrega
-
-| | |
-|---|---|
-| **Implementado** | 7 entidades JPA · 24 DTOs + 7 mappers · Controller→Service→Repository · 9 excepciones + handler global · 7 controladores `/api/v1` · reserva con lock pesimista probada bajo concurrencia autenticada · búsqueda geoespacial paginada · JWT con refresh y roles con `@PreAuthorize` · HATEOAS · eventos de dominio con `@Async` y correo HTML · 29 pruebas en verde · Swagger con Bearer, Docker Compose, SLF4J |
-| **Pendiente** | deployment · GitHub Actions · GitHub Projects |
+**GitHub Actions**. El workflow `.github/workflows/ci.yml` se ejecuta en cada push y Pull Request: prepara Java 21 y corre `./mvnw -B verify`, que compila y ejecuta toda la suite de pruebas, incluida la de concurrencia. Así ningún cambio que rompa las pruebas llega a main sin que el PR lo muestre.
 
 ## 11. Conclusión
 
