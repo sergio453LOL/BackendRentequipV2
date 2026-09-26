@@ -62,10 +62,11 @@ public class EquipmentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(equipmentAssembler.toModel(equipmentService.findById(id)));
-    }
-
+public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Long id) {
+    return ResponseEntity.ok(
+            equipmentAssembler.toModel(equipmentService.findById(id))
+    );
+}
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PatchMapping("/{id}")
     public ResponseEntity<EntityModel<EquipmentResponse>> update(
