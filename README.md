@@ -15,7 +15,8 @@
 | Rojas Llanos, Sergio | 202410758 |
 
 **Repositorio:** https://github.com/sergio453LOL/BackendRentequipV2<br>
-**Deployment:** http://3.237.198.235:8080/swagger-ui.html
+**API en vivo:** http://3.237.198.235:8080/swagger-ui/index.html#/<br>
+**Evidencias de Deployment AWS y Swagger:** https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD
 
 ---
 
@@ -34,7 +35,7 @@
 11. [Conclusión](#11-conclusión)
 12. [Apéndices](#12-apéndices)
 
-> [Estado de la entrega](#estado-de-la-entrega) — resumen de lo implementado y lo pendiente.
+> [Evidencias de Deployment](#evidencias-de-deployment) — enlaces a la API en vivo y a las capturas.
 
 ---
 
@@ -42,7 +43,7 @@
 
 ### Contexto
 
-El sector construcción peruano está dominado por contratistas pequeños y medianos que operan por proyecto. Cada obra exige un parque de maquinaria distinto y, una vez terminada, ese equipo queda inmovilizado en un almacén hasta el siguiente contrato. El resultado es un mercado con capital ocioso de un lado y demanda insatisfecha del otro, sin canal formal que los conecte.
+El sector construcción peruano lo dominan contratistas pequeños y medianos que operan por proyecto. Cada obra exige un parque de maquinaria distinto y, al terminar, ese equipo queda inmovilizado hasta el siguiente contrato. El resultado: capital ocioso de un lado y demanda insatisfecha del otro, sin canal que los conecte.
 
 ### Objetivos del Proyecto
 
@@ -220,11 +221,26 @@ Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authori
 
 ## 10. GitHub & Management
 
-**Control de versiones**. Usamos Convencional Commits (`feat(domain)`, `feat(persistence)`, `feat(security)`, `docs`), ramas por funcionalidad y Pull Request revisados por otro integrante antes de mercera a main. El `.gitignore` excluye `target/`, `.env` y la configuración del IDE: no hay credenciales en el historial.
+**Control de versiones**. Usamos Conventional Commits (`feat(domain)`, `feat(persistence)`, `feat(security)`, `docs`), ramas por funcionalidad y Pull Requests revisados por otro integrante antes de mergear a main. El `.gitignore` excluye `target/`, `.env` y la configuración del IDE: no hay credenciales en el historial.
 
 **Gestión de tareas.** Las tareas del proyecto se definieron como issues con etiquetas, responsable y milestone en `docs/github-issues.md`, y se coordinaron mediante ramas por funcionalidad y Pull Requests.
 
 **GitHub Actions**. El workflow `.github/workflows/ci.yml` se ejecuta en cada push y Pull Request: prepara Java 21 y corre `./mvnw -B verify`, que compila y ejecuta toda la suite de pruebas, incluida la de concurrencia. Así ningún cambio que rompa las pruebas llega a main sin que el PR lo muestre.
+
+## Evidencias de Deployment
+
+Instancia EC2 `t3.small` (Amazon Linux 2023) contra PostgreSQL en RDS. La base **no es accesible públicamente**: su security group solo admite el 5432 desde el del backend.
+
+| Recurso | Enlace |
+|---|---|
+| API en vivo (Swagger UI) | http://3.237.198.235:8080/swagger-ui/index.html#/ |
+| Health check | http://3.237.198.235:8080/actuator/health |
+| Especificación OpenAPI | http://3.237.198.235:8080/v3/api-docs |
+| **Evidencias de Deployment AWS y Swagger** | [Carpeta en Google Drive](https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD) |
+
+Verificado en producción: health `UP`, registro emitiendo access y refresh token, login, creación de recursos con token, enlaces `_links` en las respuestas y 401 sin token.
+
+El despliegue está automatizado en [`deploy/deploy-aws.sh`](deploy/deploy-aws.sh). La cuenta es de AWS Academy, con credenciales temporales, así que la instancia se apaga al cerrar el laboratorio; las capturas de Drive documentan el despliegue funcionando.
 
 ## 11. Conclusión
 
