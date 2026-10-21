@@ -2,12 +2,14 @@ package com.rentequip.backend.controllers;
 
 import com.rentequip.backend.dtos.request.CompanyCreateRequest;
 import com.rentequip.backend.dtos.request.CompanyUpdateRequest;
+import com.rentequip.backend.dtos.response.CompanyDashboardResponse;
 import com.rentequip.backend.dtos.response.CompanyResponse;
 import com.rentequip.backend.dtos.response.EquipmentSummaryResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.dtos.response.UserResponse;
 import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.hateoas.CompanyModelAssembler;
+import com.rentequip.backend.services.CompanyDashboardService;
 import com.rentequip.backend.services.CompanyService;
 import com.rentequip.backend.services.EquipmentService;
 import com.rentequip.backend.services.UserService;
@@ -43,6 +45,7 @@ public class CompanyController {
 
     private final CompanyModelAssembler companyAssembler;
     private final CompanyService companyService;
+    private final CompanyDashboardService companyDashboardService;
     private final UserService userService;
     private final EquipmentService equipmentService;
 
@@ -54,6 +57,11 @@ public class CompanyController {
         CompanyResponse created = companyService.create(request);
         URI location = uriBuilder.path("/api/v1/companies/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(companyAssembler.toModel(created));
+    }
+
+    @GetMapping("/me/dashboard")
+    public ResponseEntity<CompanyDashboardResponse> getMyDashboard() {
+        return ResponseEntity.ok(companyDashboardService.getForCurrentCompany());
     }
 
     @GetMapping("/{id}")

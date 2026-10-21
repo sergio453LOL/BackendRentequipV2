@@ -31,6 +31,7 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -38,6 +39,11 @@ import java.util.Set;
 public class EquipmentService {
 
     private static final double MAX_SEARCH_RADIUS_KM = 1000.0;
+    private static final double DEFAULT_SEARCH_RADIUS_KM = 25.0;
+
+    /** Lima's Plaza Mayor: origin of the catalogue when the client sends no GPS coordinates. */
+    static final BigDecimal DEFAULT_LATITUDE = new BigDecimal("-12.04637");
+    static final BigDecimal DEFAULT_LONGITUDE = new BigDecimal("-77.04279");
 
     private final EquipmentRepository equipmentRepository;
     private final CurrentUser currentUser;
@@ -93,6 +99,25 @@ public class EquipmentService {
     }
 
     /**
+     * Search with optional location. A caller with coordinates gets a nearby search (25 km unless it asks
+     * otherwise); a caller without them gets the whole catalogue, ordered by distance to Lima.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<EquipmentSummaryResponse> searchCatalog(BigDecimal latitude, BigDecimal longitude,
+                                                                 Double radiusKm, String query, Long categoryId,
+                                                                 String city, BigDecimal maxDailyRate,
+                                                                 LocalDate startDate, LocalDate endDate,
+                                                                 Long excludedOwnerId, int page, int size) {
+        boolean hasLocation = latitude != null && longitude != null;
+        double effectiveRadius = radiusKm != null
+                ? radiusKm
+                : hasLocation ? DEFAULT_SEARCH_RADIUS_KM : MAX_SEARCH_RADIUS_KM;
+        return runSearch(hasLocation ? latitude : DEFAULT_LATITUDE, hasLocation ? longitude : DEFAULT_LONGITUDE,
+                effectiveRadius, query, categoryId, city, maxDailyRate, startDate, endDate, excludedOwnerId,
+                page, size);
+    }
+
+    /**
      * Proximity search used by the catalogue screen. The repository orders by distance, so the page is
      * requested unsorted to keep a single ORDER BY clause in the generated query.
      */
@@ -102,13 +127,32 @@ public class EquipmentService {
                                                           BigDecimal maxDailyRate, LocalDate startDate,
                                                           LocalDate endDate, Long excludedOwnerId,
                                                           int page, int size) {
+        return runSearch(latitude, longitude, radiusKm, null, categoryId, city, maxDailyRate, startDate, endDate,
+                excludedOwnerId, page, size);
+    }
+
+    private PageResponse<EquipmentSummaryResponse> runSearch(BigDecimal latitude, BigDecimal longitude,
+                                                             double radiusKm, String query, Long categoryId,
+                                                             String city, BigDecimal maxDailyRate,
+                                                             LocalDate startDate, LocalDate endDate,
+                                                             Long excludedOwnerId, int page, int size) {
         validateRadius(radiusKm);
         validateSearchDates(startDate, endDate);
         validateCategoryExists(categoryId);
 
         Page<Equipment> results = equipmentRepository.searchNearby(latitude, longitude, radiusKm, categoryId,
-                normalize(city), maxDailyRate, startDate, endDate, excludedOwnerId, PageRequest.of(page, size));
+                normalize(city), toContainsPattern(query), maxDailyRate, startDate, endDate, excludedOwnerId,
+                PageRequest.of(page, size));
         return PageResponse.from(results, equipmentMapper::toSummary);
+    }
+
+    /**
+     * Case-insensitive "contains" pattern for the free-text filter. The pattern is built here rather than
+     * in JPQL so PostgreSQL always receives a typed string parameter, even when the filter is absent.
+     */
+    private String toContainsPattern(String query) {
+        String normalized = normalize(query);
+        return normalized == null ? null : "%" + normalized.toLowerCase(Locale.ROOT) + "%";
     }
 
     private Set<EquipmentCategory> resolveCategories(Set<Long> categoryIds) {

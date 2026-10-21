@@ -16,6 +16,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -85,13 +86,15 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
 
     /**
      * Catalogue search by proximity. Coordinates and radius drive the geospatial filter; category, city,
-     * price and the date window narrow it further.
+     * price and the date window narrow it further. Without coordinates (a web client with no GPS) the
+     * search is centred on Lima and covers the whole country, so it works as a general catalogue listing.
      */
     @GetMapping("/search")
     public ResponseEntity<PageResponse<EquipmentSummaryResponse>> search(
-            @RequestParam @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
-            @RequestParam @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
-            @RequestParam(defaultValue = "25") @DecimalMin("0.1") @DecimalMax("1000.0") double radiusKm,
+            @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
+            @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
+            @RequestParam(required = false) @DecimalMin("0.1") @DecimalMax("1000.0") Double radiusKm,
+            @RequestParam(required = false) @Size(max = 100) String q,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String city,
             @RequestParam(required = false) @DecimalMin("0.0") BigDecimal maxDailyRate,
@@ -100,7 +103,7 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
             @RequestParam(required = false) Long excludeOwnerId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return ResponseEntity.ok(equipmentService.search(latitude, longitude, radiusKm, categoryId, city,
+        return ResponseEntity.ok(equipmentService.searchCatalog(latitude, longitude, radiusKm, q, categoryId, city,
                 maxDailyRate, startDate, endDate, excludeOwnerId, page, size));
     }
 

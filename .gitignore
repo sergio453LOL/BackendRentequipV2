@@ -38,3 +38,6 @@ build/
 !.env.example
 *.log
 application-local.properties
+
+# Fotos subidas en desarrollo local
+uploads/

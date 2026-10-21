@@ -13,7 +13,9 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,6 +98,24 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     Page<Reservation> findByEquipmentOwnerIdAndStatus(Long ownerId, ReservationStatus status, Pageable pageable);
 
     Page<Reservation> findByEquipmentId(Long equipmentId, Pageable pageable);
+
+    long countByEquipmentOwnerIdAndStatusIn(Long ownerId, Collection<ReservationStatus> statuses);
+
+    long countByRenterIdAndStatusIn(Long renterId, Collection<ReservationStatus> statuses);
+
+    /**
+     * Rental income an owner has secured: the rental amount (deposits excluded, they are returned) of its
+     * reservations in the given statuses and currency.
+     */
+    @Query("""
+            SELECT coalesce(sum(r.rentalAmount), 0) FROM Reservation r
+            WHERE r.equipment.owner.id = :ownerId
+              AND r.status IN :statuses
+              AND r.currency = :currency
+            """)
+    BigDecimal sumRentalAmountForOwner(@Param("ownerId") Long ownerId,
+                                       @Param("statuses") Collection<ReservationStatus> statuses,
+                                       @Param("currency") String currency);
 
     /**
      * Calendar feed for the equipment detail screen: the blocked windows within the requested month range.

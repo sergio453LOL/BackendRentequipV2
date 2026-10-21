@@ -8,6 +8,7 @@ import com.rentequip.backend.enums.ReservationStatus;
 import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
 import com.rentequip.backend.services.ReservationService;
@@ -48,6 +49,9 @@ class ReservationEventsTest {
     private ReservationRepository reservationRepository;
 
     @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
     private ApplicationEvents events;
 
     private Long equipmentId;
@@ -56,6 +60,7 @@ class ReservationEventsTest {
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
         reservationRepository.deleteAll();
         equipmentRepository.deleteAll();
         companyRepository.deleteAll();

@@ -6,6 +6,7 @@ import com.rentequip.backend.services.EquipmentCategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ public class EquipmentCategoryController {
 
     private final EquipmentCategoryService categoryService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<EquipmentCategoryResponse> create(
             @Valid @RequestBody EquipmentCategoryCreateRequest request,
@@ -46,6 +48,7 @@ public class EquipmentCategoryController {
         return ResponseEntity.ok(categoryService.findById(id));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<EquipmentCategoryResponse> update(
             @PathVariable Long id,
@@ -53,6 +56,7 @@ public class EquipmentCategoryController {
         return ResponseEntity.ok(categoryService.update(id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         categoryService.delete(id);
