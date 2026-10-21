@@ -10,6 +10,7 @@ import com.rentequip.backend.exceptions.OverbookingException;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.HandoverPhotoRepository;
 import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
@@ -56,6 +57,9 @@ class ReservationConcurrencyTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
+    @Autowired
+    private HandoverPhotoRepository handoverPhotoRepository;
+
     private Long equipmentId;
     private Long ownerId;
     private Long firstRenterId;
@@ -63,6 +67,7 @@ class ReservationConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        handoverPhotoRepository.deleteAll();
         paymentRepository.deleteAll();
         reservationRepository.deleteAll();
         equipmentRepository.deleteAll();

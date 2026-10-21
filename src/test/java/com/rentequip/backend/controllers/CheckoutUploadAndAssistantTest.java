@@ -201,6 +201,50 @@ class CheckoutUploadAndAssistantTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void bothCompaniesCanDocumentTheHandoverOfAConfirmedReservation() throws Exception {
+        long reservationId = createReservation(40, 42);
+        MockMultipartFile photo = new MockMultipartFile("file", "entrega.png", "image/png", PNG_HEADER);
+
+        mockMvc.perform(multipart("/api/v1/reservations/{id}/handover-photos", reservationId).file(photo)
+                        .param("stage", "DELIVERY")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_OPERATION"));
+
+        mockMvc.perform(post("/api/v1/reservations/{id}/confirmation", reservationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(multipart("/api/v1/reservations/{id}/handover-photos", reservationId).file(photo)
+                        .param("stage", "DELIVERY")
+                        .param("latitude", "-12.0500000")
+                        .param("longitude", "-77.0500000")
+                        .param("note", "Rayón leve en la cabina")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.stage").value("DELIVERY"))
+                .andExpect(jsonPath("$.imageUrl", startsWith("http://localhost/uploads/")))
+                .andExpect(jsonPath("$.latitude").value(-12.05));
+
+        mockMvc.perform(get("/api/v1/reservations/{id}/handover-photos", reservationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].note").value("Rayón leve en la cabina"));
+    }
+
+    @Test
+    void outsidersCannotSeeHandoverPhotos() throws Exception {
+        long reservationId = createReservation(50, 51);
+        String outsiderToken = register("209000%05d".formatted(SEQUENCE.getAndIncrement()),
+                "outsider" + SEQUENCE.get() + "@checkout.pe").get("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/reservations/{id}/handover-photos", reservationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(outsiderToken)))
+                .andExpect(status().isForbidden());
+    }
+
     private long createReservation(int startInDays, int endInDays) throws Exception {
         return readId(mockMvc.perform(post("/api/v1/reservations")
                         .header(HttpHeaders.AUTHORIZATION, bearer(renterToken))

@@ -8,6 +8,7 @@ import com.rentequip.backend.entities.EquipmentCategory;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.HandoverPhotoRepository;
 import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +45,14 @@ class EquipmentSearchTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
+    @Autowired
+    private HandoverPhotoRepository handoverPhotoRepository;
+
     private Long excavatorCategoryId;
 
     @BeforeEach
     void setUp() {
+        handoverPhotoRepository.deleteAll();
         paymentRepository.deleteAll();
         reservationRepository.deleteAll();
         equipmentRepository.deleteAll();
