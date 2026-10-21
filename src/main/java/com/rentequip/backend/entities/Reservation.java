@@ -2,6 +2,7 @@ package com.rentequip.backend.entities;
 
 import com.rentequip.backend.enums.ReservationStatus;
 import jakarta.persistence.CascadeType;
+import org.hibernate.annotations.BatchSize;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -102,6 +103,7 @@ public class Reservation extends BaseEntity {
     @Column(length = 500)
     private String notes;
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "reservation", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     private List<Payment> payments = new ArrayList<>();
 

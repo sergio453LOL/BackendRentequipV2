@@ -1,5 +1,6 @@
 package com.rentequip.backend.dtos.response;
 
+import com.rentequip.backend.enums.ReservationPaymentStatus;
 import com.rentequip.backend.enums.ReservationStatus;
 
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public record ReservationResponse(
         String currency,
         ReservationStatus status,
         String notes,
+        ReservationPaymentStatus paymentStatus,
         LocalDateTime createdAt
 ) {
 }
