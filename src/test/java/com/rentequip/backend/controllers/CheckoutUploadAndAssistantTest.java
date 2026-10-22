@@ -19,8 +19,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -160,6 +162,33 @@ class CheckoutUploadAndAssistantTest {
         mockMvc.perform(get(url.replace("http://localhost", "")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG));
+    }
+
+    @Test
+    void behindTheHttpsProxyImageUrlsUseHttps() throws Exception {
+        MockMultipartFile image = new MockMultipartFile("file", "foto.png", "image/png", PNG_HEADER);
+
+        mockMvc.perform(multipart("/api/v1/uploads/images").file(image)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Host", "3-237-198-235.sslip.io"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.url", startsWith("https://3-237-198-235.sslip.io/uploads/")));
+    }
+
+    @Test
+    void vercelDeploymentsPassTheCorsPreflight() throws Exception {
+        mockMvc.perform(options("/api/v1/equipment/search")
+                        .header(HttpHeaders.ORIGIN, "https://rentequip.vercel.app")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://rentequip.vercel.app"));
+
+        mockMvc.perform(options("/api/v1/equipment/search")
+                        .header(HttpHeaders.ORIGIN, "https://sitio-ajeno.com")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

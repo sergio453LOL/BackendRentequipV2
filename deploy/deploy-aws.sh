@@ -6,10 +6,15 @@
 # en unas horas. Transfiere el JAR mediante una URL prefirmada de S3 en lugar de SSH,
 # porque asi la instancia no necesita ni clave ni instance profile.
 #
+# HTTPS: Caddy queda delante de la API en los puertos 80/443 y pide un certificado de
+# Let's Encrypt para <ip-con-guiones>.sslip.io, un DNS publico que resuelve a la propia IP.
+# Asi la web en Vercel (HTTPS) llama a la API sin bloqueos de contenido mixto y sin comprar dominio.
+#
 # USO:
 #   1. Exporta las credenciales del panel "AWS Details > AWS CLI" de Vocareum.
 #   2. export DB_PASSWORD='la-contrasena-de-tu-RDS'
-#   3. bash deploy/deploy-aws.sh
+#   3. (opcional) export CORS_ALLOWED_ORIGINS='http://localhost:*,https://*.vercel.app'
+#   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
 
@@ -27,6 +32,7 @@ DB_NAME="${DB_NAME:-rentequip}"
 DB_USER="${DB_USER:-postgres}"
 
 JAR_LOCAL="target/backend-0.0.1-SNAPSHOT.jar"
+CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:*,https://*.vercel.app}"
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 die() { printf '\n\033[31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
@@ -54,12 +60,16 @@ VPC_ID="$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
           --query 'Vpcs[0].VpcId' --output text --region "$REGION")"
 SG_ID="$(aws ec2 create-security-group \
           --group-name "${TAG}-sg-$(date +%s)" \
-          --description "RentEquip backend - puerto $APP_PORT publico" \
+          --description "RentEquip backend - HTTPS 80/443 y diagnostico $APP_PORT" \
           --vpc-id "$VPC_ID" --query 'GroupId' --output text --region "$REGION")"
 
-aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
-  --protocol tcp --port "$APP_PORT" --cidr 0.0.0.0/0 --region "$REGION" >/dev/null
-echo "Security group: $SG_ID (puerto $APP_PORT abierto)"
+# 80 para el reto HTTP de Let's Encrypt y la redireccion, 443 para la API con HTTPS.
+# El $APP_PORT queda abierto solo para diagnosticar si el certificado no llegara a emitirse.
+for PORT in 80 443 "$APP_PORT"; do
+  aws ec2 authorize-security-group-ingress --group-id "$SG_ID" \
+    --protocol tcp --port "$PORT" --cidr 0.0.0.0/0 --region "$REGION" >/dev/null
+done
+echo "Security group: $SG_ID (puertos 80, 443 y $APP_PORT abiertos)"
 
 # La RDS no es publica. En lugar de abrirla a internet, se autoriza unicamente al
 # security group del backend, que es el minimo privilegio que hace falta.
@@ -85,7 +95,7 @@ USER_DATA="$(cat <<EOF
 #!/bin/bash
 set -x
 dnf install -y java-21-amazon-corretto-headless
-mkdir -p /opt/rentequip
+mkdir -p /opt/rentequip/uploads
 curl -sS -o /opt/rentequip/app.jar "$JAR_URL"
 
 cat > /etc/systemd/system/rentequip.service <<'UNIT'
@@ -107,6 +117,8 @@ Environment="DB_PASSWORD=$DB_PASSWORD"
 Environment="JWT_SECRET=$JWT_SECRET"
 Environment="MAIL_ENABLED=false"
 Environment="PORT=$APP_PORT"
+Environment="UPLOADS_DIR=/opt/rentequip/uploads"
+Environment="CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS"
 
 [Install]
 WantedBy=multi-user.target
@@ -114,6 +126,42 @@ UNIT
 
 systemctl daemon-reload
 systemctl enable --now rentequip
+
+# HTTPS con Caddy. El dominio sale de la IP publica que da el servicio de metadatos (IMDSv2).
+IMDS_TOKEN=\$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+PUBLIC_IP=\$(curl -sS -H "X-aws-ec2-metadata-token: \$IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
+DOMAIN="\$(echo "\$PUBLIC_IP" | tr . -).sslip.io"
+
+curl -fsSL -o /usr/local/bin/caddy "https://caddyserver.com/api/download?os=linux&arch=amd64"
+chmod +x /usr/local/bin/caddy
+mkdir -p /etc/caddy /var/lib/caddy
+cat > /etc/caddy/Caddyfile <<CADDY
+\$DOMAIN {
+    encode gzip
+    reverse_proxy 127.0.0.1:$APP_PORT
+}
+CADDY
+
+cat > /etc/systemd/system/caddy.service <<'UNIT'
+[Unit]
+Description=Caddy, HTTPS delante de RentEquip
+After=network-online.target
+
+[Service]
+Environment="XDG_DATA_HOME=/var/lib/caddy"
+Environment="XDG_CONFIG_HOME=/var/lib/caddy"
+ExecStart=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+Restart=always
+RestartSec=10
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now caddy
 EOF
 )"
 
@@ -130,20 +178,22 @@ aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
 PUBLIC_IP="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' --output text --region "$REGION")"
 echo "IP publica: $PUBLIC_IP"
+DOMAIN="$(echo "$PUBLIC_IP" | tr . -).sslip.io"
+BASE="https://${DOMAIN}"
 
 # --------------------------------------------------------------------- 4. esperar a la app
 say "Esperando a que la API responda (arranque + descarga del JAR, ~3 minutos)"
-HEALTH="http://${PUBLIC_IP}:${APP_PORT}/actuator/health"
+HEALTH="${BASE}/actuator/health"
 for i in $(seq 1 40); do
   if curl -fsS --max-time 5 "$HEALTH" >/dev/null 2>&1; then
     echo
     curl -sS "$HEALTH"; echo
-    say "LISTO: http://${PUBLIC_IP}:${APP_PORT}/swagger-ui.html"
+    say "LISTO: ${BASE}/swagger-ui.html"
     break
   fi
   printf '.'
   sleep 15
-  [ "$i" -eq 40 ] && die "La API no respondio en 10 minutos. Revisa: aws ec2 get-console-output --instance-id $INSTANCE_ID --region $REGION"
+  [ "$i" -eq 40 ] && die "Sin respuesta por HTTPS en 10 minutos. Prueba http://${PUBLIC_IP}:${APP_PORT}/actuator/health y revisa: aws ec2 get-console-output --instance-id $INSTANCE_ID --region $REGION"
 done
 
 # --------------------------------------------------------------------- 5. limpiar y documentar
@@ -151,7 +201,6 @@ aws s3 rm "s3://$BUCKET/app.jar" --region "$REGION" >/dev/null 2>&1 || true
 aws s3 rb "s3://$BUCKET" --region "$REGION" >/dev/null 2>&1 || true
 
 say "Actualizando el README"
-BASE="http://${PUBLIC_IP}:${APP_PORT}"
 sed -i "s|^\*\*Deployment:\*\* .*|**Deployment:** ${BASE}/swagger-ui.html|" README.md
 grep -n "Deployment:" README.md
 
@@ -160,6 +209,8 @@ cat <<RESUMEN
   URL base      : $BASE
   Swagger       : $BASE/swagger-ui.html
   Health        : $BASE/actuator/health
+  API (VITE_API_URL / EXPO_PUBLIC_API_URL): $BASE/api/v1
+  Diagnostico sin TLS: http://${PUBLIC_IP}:${APP_PORT}/actuator/health
   Instancia     : $INSTANCE_ID
   Security group: $SG_ID
 
