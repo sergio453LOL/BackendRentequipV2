@@ -38,7 +38,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "start:tunnel": "expo start --tunnel",
+    "typecheck": "tsc --noEmit",
+    "doctor": "expo-doctor"
   },
   "private": true
 }

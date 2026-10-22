@@ -18,7 +18,32 @@ la entrega y devolución con fotos.
    ```
 4. Escanea el QR con **Expo Go** (Android) o con la cámara (iOS).
 
-Para la demo con el backend desplegado, usa su URL pública con HTTPS en `EXPO_PUBLIC_API_URL`.
+Si el QR no conecta (otra red o firewall), usa `npm run start:tunnel`: Expo crea un túnel público.
+
+## Con el backend desplegado
+
+1. En `.env` pon la URL HTTPS que imprime `deploy/deploy-aws.sh`:
+   `EXPO_PUBLIC_API_URL=https://3-237-198-235.sslip.io/api/v1`
+2. Reinicia con `npx expo start -c`: las variables `EXPO_PUBLIC_*` se insertan al empaquetar y `-c`
+   limpia la caché para que tome la nueva.
+3. Escanea el QR con Expo Go. Ya funciona con cualquier red, porque la API es pública.
+
+## Publicar un APK (opcional, EAS)
+
+`eas.json` trae el perfil `preview`, que genera un APK instalable para compartir el enlace:
+
+```bash
+npm install -g eas-cli
+eas login
+eas init                  # vincula el proyecto a tu cuenta de Expo
+eas env:create --name EXPO_PUBLIC_API_URL --value https://<ip-con-guiones>.sslip.io/api/v1 --environment preview --visibility plaintext
+eas env:create --name GOOGLE_MAPS_API_KEY --value <tu-clave> --environment preview --visibility secret
+eas build -p android --profile preview
+```
+
+En Expo Go el mapa funciona sin clave. En un APK, `react-native-maps` necesita
+`GOOGLE_MAPS_API_KEY` (Maps SDK for Android en Google Cloud); `app.config.ts` la toma del entorno,
+así que la clave nunca se guarda en el repositorio.
 
 ## Cómo cubre la rúbrica de Mobile
 
