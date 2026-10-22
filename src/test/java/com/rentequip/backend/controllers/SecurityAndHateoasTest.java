@@ -148,6 +148,70 @@ class SecurityAndHateoasTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void catalogueSearchWorksWithoutTokenOrCoordinates() throws Exception {
+        mockMvc.perform(get("/api/v1/equipment/search"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void onlyAnAdminCanManageCategories() throws Exception {
+        JsonNode admin = register("20600000088", "admin@categories.pe", "Constructora Categorias");
+        String managerToken = createUserAndLogin(admin, "manager@categories.pe", "MANAGER");
+
+        mockMvc.perform(delete("/api/v1/equipment-categories/{id}", 1)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + managerToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(post("/api/v1/equipment-categories")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Compactadoras"}"""))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void dashboardReturnsTheMetricsOfTheAuthenticatedCompany() throws Exception {
+        JsonNode session = register("20600000099", "admin@dashboard.pe", "Constructora Dashboard");
+
+        mockMvc.perform(get("/api/v1/companies/me/dashboard")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + session.get("accessToken").asText()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyId").value(session.get("companyId").asLong()))
+                .andExpect(jsonPath("$.publishedEquipment").value(0))
+                .andExpect(jsonPath("$.activeReservationsAsOwner").value(0))
+                .andExpect(jsonPath("$.estimatedRevenue").value(0))
+                .andExpect(jsonPath("$.currency").value("PEN"));
+    }
+
+    @Test
+    void dashboardRequiresAToken() throws Exception {
+        mockMvc.perform(get("/api/v1/companies/me/dashboard"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private String createUserAndLogin(JsonNode admin, String email, String role) throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"firstName":"Luis","lastName":"Diaz","email":"%s",
+                                 "password":"%s","role":"%s","companyId":%d}"""
+                                .formatted(email, PASSWORD, role, admin.get("companyId").asLong())))
+                .andExpect(status().isCreated());
+
+        return objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"%s"}""".formatted(email, PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString())
+                .get("accessToken").asText();
+    }
+
     private JsonNode register(String taxId, String email, String companyName) throws Exception {
         String payload = """
                 {

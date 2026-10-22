@@ -1,6 +1,7 @@
 package com.rentequip.backend.repositories;
 
 import com.rentequip.backend.entities.Equipment;
+import com.rentequip.backend.enums.EquipmentStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +49,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     Page<Equipment> findByOwnerId(Long ownerId, Pageable pageable);
 
+    long countByOwnerIdAndStatusNot(Long ownerId, EquipmentStatus status);
+
     boolean existsBySerialNumber(String serialNumber);
 
     boolean existsBySerialNumberAndIdNot(String serialNumber, Long id);
@@ -64,6 +67,10 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id = :categoryId))
               AND (:city IS NULL OR lower(e.city) = lower(:city))
+              AND (:namePattern IS NULL
+                   OR lower(e.name) LIKE :namePattern
+                   OR lower(e.brand) LIKE :namePattern
+                   OR lower(e.model) LIKE :namePattern)
               AND (:maxDailyRate IS NULL OR e.dailyRate <= :maxDailyRate)
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """
@@ -84,6 +91,10 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id = :categoryId))
               AND (:city IS NULL OR lower(e.city) = lower(:city))
+              AND (:namePattern IS NULL
+                   OR lower(e.name) LIKE :namePattern
+                   OR lower(e.brand) LIKE :namePattern
+                   OR lower(e.model) LIKE :namePattern)
               AND (:maxDailyRate IS NULL OR e.dailyRate <= :maxDailyRate)
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """
@@ -102,6 +113,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                                  @Param("radiusKm") double radiusKm,
                                  @Param("categoryId") Long categoryId,
                                  @Param("city") String city,
+                                 @Param("namePattern") String namePattern,
                                  @Param("maxDailyRate") BigDecimal maxDailyRate,
                                  @Param("startDate") LocalDate startDate,
                                  @Param("endDate") LocalDate endDate,

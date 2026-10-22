@@ -10,6 +10,7 @@ import com.rentequip.backend.exceptions.OverbookingException;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
 import org.junit.jupiter.api.AfterEach;
@@ -52,6 +53,9 @@ class ReservationConcurrencyTest {
     @Autowired
     private ReservationRepository reservationRepository;
 
+    @Autowired
+    private PaymentRepository paymentRepository;
+
     private Long equipmentId;
     private Long ownerId;
     private Long firstRenterId;
@@ -59,6 +63,7 @@ class ReservationConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
         reservationRepository.deleteAll();
         equipmentRepository.deleteAll();
         companyRepository.deleteAll();

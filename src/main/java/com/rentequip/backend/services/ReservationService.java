@@ -58,6 +58,7 @@ public class ReservationService {
     private final CompanyRepository companyRepository;
     private final ReservationMapper reservationMapper;
     private final ReservationStatusPolicy statusPolicy;
+    private final PaymentService paymentService;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservationResponse create(ReservationCreateRequest request) {
@@ -171,6 +172,7 @@ public class ReservationService {
         reservation.setStatus(request.status());
         appendReason(reservation, request.reason());
         synchronizeEquipmentStatus(reservation, request.status());
+        paymentService.settle(reservation, request.status());
     }
 
     /**

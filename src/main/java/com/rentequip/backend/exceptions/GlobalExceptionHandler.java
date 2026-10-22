@@ -22,6 +22,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
@@ -125,6 +127,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException exception,
                                                           HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "ENDPOINT_NOT_FOUND", "No endpoint matches this request", request, null);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException exception,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.CONTENT_TOO_LARGE, "FILE_TOO_LARGE", "The file must be 5 MB or smaller", request, null);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException exception,
+                                                          HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "MISSING_PARAMETER",
+                "Required part '" + exception.getRequestPartName() + "' is missing", request, null);
     }
 
     @ExceptionHandler(Exception.class)

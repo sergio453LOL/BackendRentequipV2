@@ -8,6 +8,7 @@ import com.rentequip.backend.entities.EquipmentCategory;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,10 +41,14 @@ class EquipmentSearchTest {
     @Autowired
     private ReservationRepository reservationRepository;
 
+    @Autowired
+    private PaymentRepository paymentRepository;
+
     private Long excavatorCategoryId;
 
     @BeforeEach
     void setUp() {
+        paymentRepository.deleteAll();
         reservationRepository.deleteAll();
         equipmentRepository.deleteAll();
         companyRepository.deleteAll();
@@ -106,6 +111,32 @@ class EquipmentSearchTest {
                 null, null, null, start, end, null, 0, 20);
 
         assertThat(results.content()).extracting(EquipmentSummaryResponse::id).doesNotContain(nearestId);
+    }
+
+    @Test
+    void withoutCoordinatesListsTheWholeCatalogueStartingFromLima() {
+        PageResponse<EquipmentSummaryResponse> results = equipmentService.searchCatalog(null, null, null,
+                null, null, null, null, null, null, null, 0, 20);
+
+        assertThat(results.content()).extracting(EquipmentSummaryResponse::name)
+                .containsExactly("Excavadora cercana", "Generador cercano", "Excavadora en Arequipa");
+    }
+
+    @Test
+    void withCoordinatesButNoRadiusKeepsTheNearbyDefault() {
+        PageResponse<EquipmentSummaryResponse> results = equipmentService.searchCatalog(LIMA_LAT, LIMA_LNG, null,
+                null, null, null, null, null, null, null, 0, 20);
+
+        assertThat(results.totalElements()).isEqualTo(2);
+    }
+
+    @Test
+    void filtersByFreeTextIgnoringCase() {
+        PageResponse<EquipmentSummaryResponse> results = equipmentService.searchCatalog(null, null, null,
+                "EXCAVADORA", null, null, null, null, null, null, 0, 20);
+
+        assertThat(results.content()).extracting(EquipmentSummaryResponse::name)
+                .containsExactly("Excavadora cercana", "Excavadora en Arequipa");
     }
 
     private PageResponse<EquipmentSummaryResponse> search(double radiusKm, Long categoryId, BigDecimal maxDailyRate) {

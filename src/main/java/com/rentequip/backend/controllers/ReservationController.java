@@ -1,13 +1,16 @@
 package com.rentequip.backend.controllers;
 
+import com.rentequip.backend.dtos.request.PaymentRequest;
 import com.rentequip.backend.dtos.request.ReservationCreateRequest;
 import com.rentequip.backend.dtos.request.ReservationStatusUpdateRequest;
 import com.rentequip.backend.dtos.response.AvailabilityResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
+import com.rentequip.backend.dtos.response.PaymentResponse;
 import com.rentequip.backend.dtos.response.ReservationResponse;
 import com.rentequip.backend.enums.ReservationRole;
 import com.rentequip.backend.enums.ReservationStatus;
 import com.rentequip.backend.hateoas.ReservationModelAssembler;
+import com.rentequip.backend.services.PaymentService;
 import com.rentequip.backend.services.ReservationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -18,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 import java.time.LocalDate;
 
 @RestController
@@ -42,6 +47,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final ReservationModelAssembler reservationAssembler;
+    private final PaymentService paymentService;
 
     @PostMapping
     public ResponseEntity<EntityModel<ReservationResponse>> create(
@@ -93,6 +99,21 @@ public class ReservationController {
             @RequestParam(required = false) String reason) {
         return ResponseEntity.ok(reservationAssembler.toModel(
                 reservationService.cancel(id, reason)));
+    }
+
+    /**
+     * Checkout: captures the rental and holds the security deposit using a client-side payment token.
+     */
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<List<PaymentResponse>> pay(
+            @PathVariable Long id,
+            @Valid @RequestBody PaymentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.pay(id, request));
+    }
+
+    @GetMapping("/{id}/payments")
+    public ResponseEntity<List<PaymentResponse>> findPayments(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.findByReservation(id));
     }
 
     @GetMapping("/availability")
