@@ -5,6 +5,11 @@ import { tokenStorage } from '../utils/tokenStorage'
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api/v1'
 
+// A page served over HTTPS (Vercel) cannot call an http:// API: the browser blocks it as mixed content.
+if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http://')) {
+  console.error(`VITE_API_URL (${API_BASE_URL}) usa http:// y el navegador bloqueará las peticiones. Usa la URL https:// del backend.`)
+}
+
 const REQUEST_TIMEOUT_MS = 15_000
 const AUTH_PATH_PREFIX = '/auth/'
 

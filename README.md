@@ -242,6 +242,16 @@ Verificado en producción: health `UP`, registro emitiendo access y refresh toke
 
 El despliegue está automatizado en [`deploy/deploy-aws.sh`](deploy/deploy-aws.sh). La cuenta es de AWS Academy, con credenciales temporales, así que la instancia se apaga al cerrar el laboratorio; las capturas de Drive documentan el despliegue funcionando.
 
+### Fase 2: HTTPS, web y móvil
+
+| Pieza | Dónde | Configuración |
+|---|---|---|
+| API (HTTPS) | EC2 + RDS | `deploy/deploy-aws.sh` pone Caddy delante de la API con un certificado de Let's Encrypt para `<ip-con-guiones>.sslip.io` y abre solo 80/443 (y 8080 para diagnóstico). `server.forward-headers-strategy` hace que las URLs de las fotos salgan con `https://`. |
+| Web | Vercel | Root Directory `frontend-web`, variable `VITE_API_URL=https://<ip-con-guiones>.sslip.io/api/v1`. Ver [`frontend-web/README.md`](frontend-web/README.md). |
+| Móvil | Expo Go / EAS | `EXPO_PUBLIC_API_URL` en `frontend-mobile/.env`; perfil `preview` de `eas.json` para un APK. Ver [`frontend-mobile/README.md`](frontend-mobile/README.md). |
+
+CORS admite por defecto `http://localhost:*` y `https://*.vercel.app` (`CORS_ALLOWED_ORIGINS` para agregar otros dominios). El contenido mixto se evita porque toda la cadena va por HTTPS: Vercel → Caddy → API.
+
 ## 11. Conclusión
 
 ### Logros del Proyecto
