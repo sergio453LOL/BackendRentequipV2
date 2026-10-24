@@ -3,6 +3,7 @@ package com.rentequip.backend.services;
 import com.rentequip.backend.dtos.request.ReservationCreateRequest;
 import com.rentequip.backend.dtos.request.ReservationStatusUpdateRequest;
 import com.rentequip.backend.dtos.response.AvailabilityResponse;
+import com.rentequip.backend.dtos.response.BlockedWindowResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.dtos.response.ReservationResponse;
 import com.rentequip.backend.entities.Company;
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /**
  * Booking flow. Creation and confirmation run inside a single transaction that first takes a
@@ -163,6 +165,28 @@ public class ReservationService {
         assertEquipmentExists(equipmentId);
         boolean available = !reservationRepository.existsOverlapping(equipmentId, startDate, endDate);
         return new AvailabilityResponse(equipmentId, startDate, endDate, available);
+    }
+
+    /** Longest range the availability calendar may ask for in one request. */
+    static final int MAX_CALENDAR_DAYS = 120;
+
+    /**
+     * Periods in which the machine is held (requested, confirmed or in progress) within the range, for the
+     * availability calendar on the equipment page.
+     */
+    @Transactional(readOnly = true)
+    public List<BlockedWindowResponse> findBlockedWindows(Long equipmentId, LocalDate from, LocalDate until) {
+        if (until.isBefore(from)) {
+            throw new InvalidReservationDateException("The end of the range must be on or after its start");
+        }
+        if (ChronoUnit.DAYS.between(from, until) + 1 > MAX_CALENDAR_DAYS) {
+            throw new InvalidReservationDateException("The calendar range cannot exceed " + MAX_CALENDAR_DAYS + " days");
+        }
+        assertEquipmentExists(equipmentId);
+        return reservationRepository.findBlockedWindows(equipmentId, from, until).stream()
+                .map(reservation -> new BlockedWindowResponse(
+                        reservation.getStartDate(), reservation.getEndDate(), reservation.getStatus()))
+                .toList();
     }
 
     private void applyStatusChange(Reservation reservation, ReservationStatusUpdateRequest request) {
