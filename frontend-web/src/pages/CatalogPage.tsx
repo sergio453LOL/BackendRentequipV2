@@ -84,12 +84,12 @@ function CategoryCards({
             aria-pressed={isSelected}
             onClick={() => onSelect(item.value)}
             className={cn(
-              'flex h-[61px] min-w-[132px] shrink-0 flex-col justify-center rounded-lg border px-3 text-left transition-colors sm:flex-1',
-              isSelected ? 'border-[1.5px] border-accent bg-accent-tint/50' : 'border-line bg-sheet hover:border-slate-300',
+              'flex h-16 min-w-[132px] shrink-0 flex-col justify-center rounded-xl border px-4 text-left transition-all duration-200 sm:flex-1',
+              isSelected ? 'border-brand bg-accent-tint ring-1 ring-brand' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm',
             )}
           >
             <span className="truncate text-[13px] text-slate-600">{item.name}</span>
-            <span className={cn('num text-base font-semibold', count === 0 ? 'text-slate-500' : 'text-ink')}>
+            <span className={cn('num text-lg font-bold', count === 0 ? 'text-slate-400' : 'text-ink')}>
               {count === undefined ? '–' : formatNumber(count)}
             </span>
           </button>

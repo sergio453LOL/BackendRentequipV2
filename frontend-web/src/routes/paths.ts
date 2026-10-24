@@ -3,6 +3,7 @@ export const PATHS = {
   login: '/login',
   register: '/register',
   catalog: '/catalog',
+  fleet: '/fleet',
   publishEquipment: '/equipment/new',
   equipmentDetail: '/equipment/:id',
   reservations: '/reservations',

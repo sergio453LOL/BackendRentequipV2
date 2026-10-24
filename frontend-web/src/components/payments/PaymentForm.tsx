@@ -157,7 +157,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
               Pagar después
             </Button>
           )}
-          <Button type="submit" isLoading={isProcessing} leftIcon={<Lock className="size-4" />}>
+          <Button type="submit" variant="action" isLoading={isProcessing} leftIcon={<Lock className="size-4" />}>
             Pagar {money(reservation.totalAmount)}
           </Button>
         </div>

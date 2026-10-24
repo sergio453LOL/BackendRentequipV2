@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import('../pages/LoginPage'))
 const RegisterPage = lazy(() => import('../pages/RegisterPage'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage'))
 const CatalogPage = lazy(() => import('../pages/CatalogPage'))
+const FleetPage = lazy(() => import('../pages/FleetPage'))
 const EquipmentDetailPage = lazy(() => import('../pages/EquipmentDetailPage'))
 const MyReservationsPage = lazy(() => import('../pages/MyReservationsPage'))
 const PublishEquipmentPage = lazy(() => import('../pages/PublishEquipmentPage'))
@@ -28,6 +29,7 @@ export function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route path={PATHS.home} element={<DashboardPage />} />
             <Route path={PATHS.catalog} element={<CatalogPage />} />
+            <Route path={PATHS.fleet} element={<FleetPage />} />
             <Route path={PATHS.equipmentDetail} element={<EquipmentDetailPage />} />
             <Route path={PATHS.reservations} element={<MyReservationsPage />} />
             <Route element={<PrivateRoute allowedRoles={PUBLISHER_ROLES} />}>

@@ -20,7 +20,7 @@ export function ReservationCard({ reservation, role, actions }: ReservationCardP
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to={buildPath.equipmentDetail(reservation.equipmentId)}
-            className="truncate text-[15px] font-medium text-ink hover:underline"
+            className="truncate text-[15px] font-semibold text-ink hover:text-accent-ink"
           >
             {reservation.equipmentName}
           </Link>
@@ -37,7 +37,7 @@ export function ReservationCard({ reservation, role, actions }: ReservationCardP
 
       <div className="flex flex-col gap-2 md:items-end">
         <p className="md:text-right">
-          <span className="num block text-base font-semibold text-ink">{formatCurrency(reservation.totalAmount, reservation.currency)}</span>
+          <span className="num block text-lg font-bold text-ink">{formatCurrency(reservation.totalAmount, reservation.currency)}</span>
           <span className="num text-xs text-slate-500">
             incluye {formatCurrency(reservation.securityDeposit, reservation.currency)} de garantía
           </span>
@@ -48,13 +48,8 @@ export function ReservationCard({ reservation, role, actions }: ReservationCardP
   )
 }
 
-const PILL = 'inline-flex h-5 flex-none items-center rounded-full px-2 text-xs font-medium whitespace-nowrap'
-
 function PaymentBadge({ reservation }: { reservation: Reservation }) {
-  if (reservation.paymentStatus === 'PAID') return <span className={`${PILL} bg-[#dcfae5] text-[#04250e]`}>Pagada</span>
-  if (reservation.paymentStatus === 'REFUNDED') return <span className={`${PILL} bg-active text-slate-700`}>Reembolsada</span>
-  if (reservation.status === 'PENDING' || reservation.status === 'CONFIRMED') {
-    return <span className={`${PILL} border border-dashed border-slate-300 text-slate-600`}>Pago pendiente</span>
-  }
-  return null
+  const isClosed = reservation.status === 'CANCELLED' || reservation.status === 'REJECTED'
+  if (isClosed && reservation.paymentStatus === 'UNPAID') return null
+  return <StatusBadge kind="payment" status={reservation.paymentStatus} />
 }

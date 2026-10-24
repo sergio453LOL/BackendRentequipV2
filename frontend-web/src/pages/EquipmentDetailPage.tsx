@@ -7,6 +7,8 @@ import { ErrorState } from '../components/common/ErrorState'
 import { PageHeader } from '../components/common/PageHeader'
 import { StatusBadge } from '../components/common/StatusBadge'
 import { ImageGallery } from '../components/equipment/ImageGallery'
+import { AvailabilityCalendar } from '../components/equipment/AvailabilityCalendar'
+import { QuickQuote } from '../components/equipment/QuickQuote'
 import { SpecificationList } from '../components/equipment/SpecificationList'
 import { ReservationRequestModal } from '../components/reservations/ReservationRequestModal'
 import { useAuth } from '../hooks/useAuth'
@@ -87,9 +89,11 @@ export default function EquipmentDetailPage() {
         <div className="min-w-0 space-y-8 lg:col-span-3">
           <ImageGallery images={equipment.imageUrls} alt={equipment.name} />
 
+          <AvailabilityCalendar equipmentId={equipment.id} />
+
           {equipment.description && (
             <section aria-labelledby="description-title" className="space-y-2">
-              <h2 id="description-title" className="text-base font-semibold text-ink">
+              <h2 id="description-title" className="text-lg font-bold text-ink">
                 Descripción
               </h2>
               <p className="max-w-[68ch] text-[15px] leading-6 whitespace-pre-line text-ink">{equipment.description}</p>
@@ -97,7 +101,7 @@ export default function EquipmentDetailPage() {
           )}
 
           <section aria-labelledby="specs-title" className="space-y-3">
-            <h2 id="specs-title" className="text-base font-semibold text-ink">
+            <h2 id="specs-title" className="text-lg font-bold text-ink">
               Especificaciones técnicas
             </h2>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg bg-raised p-5 text-sm sm:grid-cols-3">
@@ -117,7 +121,7 @@ export default function EquipmentDetailPage() {
         </div>
 
         <aside className="lg:col-span-2">
-          <div className="space-y-5 rounded-lg border border-line bg-sheet p-5 lg:sticky lg:top-4">
+          <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-20">
             <div className="flex items-center justify-between gap-3">
               <StatusBadge kind="equipment" status={equipment.status} />
               {averageRating > 0 && (
@@ -129,7 +133,7 @@ export default function EquipmentDetailPage() {
             </div>
 
             <div>
-              <p className="num text-[28px] leading-9 font-semibold text-ink">
+              <p className="num text-3xl leading-9 font-bold text-ink">
                 {formatCurrency(equipment.dailyRate, equipment.currency)}
                 <span className="text-sm font-normal text-slate-500"> / día</span>
               </p>
@@ -138,7 +142,7 @@ export default function EquipmentDetailPage() {
               )}
             </div>
 
-            <ul className="space-y-2 border-t border-rule pt-4 text-sm text-ink">
+            <ul className="space-y-2 border-t border-slate-100 pt-4 text-sm text-ink">
               <li className="flex items-center gap-2">
                 <ShieldCheck className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
                 Garantía reembolsable de {formatCurrency(equipment.securityDeposit, equipment.currency)}
@@ -156,22 +160,25 @@ export default function EquipmentDetailPage() {
             {equipment.categories.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="Categorías">
                 {equipment.categories.map((category) => (
-                  <li key={category} className="rounded-full bg-active px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                  <li key={category} className="rounded-full bg-accent-tint px-2.5 py-0.5 text-xs font-semibold text-amber-900">
                     {category}
                   </li>
                 ))}
               </ul>
             )}
 
+            {reserveBlockedReason === null && <QuickQuote equipment={equipment} />}
+
             <Button
               size="lg"
+              variant="action"
               fullWidth
               disabled={reserveBlockedReason !== null}
               onClick={() => setIsReserving(true)}
               leftIcon={<CalendarPlus className="size-4" />}
               title={reserveBlockedReason ?? undefined}
             >
-              Solicitar reserva
+              Reservar
             </Button>
             {reserveBlockedReason && <p className="text-center text-[13px] text-slate-600">{reserveBlockedReason}</p>}
           </div>

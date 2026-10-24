@@ -20,4 +20,5 @@ export const ENDPOINTS = {
   imageUploads: '/uploads/images',
   assistantChat: '/assistant/chat',
   equipmentRating: '/reviews/ratings',
+  equipmentBlockedDates: (id: number) => `/equipment/${id}/blocked-dates`,
 } as const

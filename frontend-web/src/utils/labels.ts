@@ -17,7 +17,7 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 }
 
 export const RESERVATION_ROLE_LABELS: Record<ReservationRole, string> = {
-  RENTER: 'Mis solicitudes',
+  RENTER: 'Mis reservas',
   OWNER: 'Reservas de mis equipos',
 }
 

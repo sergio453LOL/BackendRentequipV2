@@ -49,7 +49,7 @@ export function ChipSelect({ label, options, value, onChange, error, hint, requi
               className={cn(
                 'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition',
                 isSelected
-                  ? 'border-ink bg-active text-ink'
+                  ? 'border-brand bg-accent-tint text-amber-900'
                   : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400',
               )}
             >

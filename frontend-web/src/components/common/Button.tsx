@@ -2,7 +2,8 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from '../../utils/cn'
 import { Spinner } from './Spinner'
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+/** primary: dark asphalt · action: industrial orange for Reservar/Pagar/Publicar · secondary/ghost/danger. */
+type ButtonVariant = 'primary' | 'action' | 'secondary' | 'danger' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,8 +16,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-ink text-white hover:bg-ink-hover focus-visible:outline-ink',
+  action: 'bg-action text-white hover:bg-action-hover focus-visible:outline-action',
   secondary:
-    'border border-slate-300 bg-white text-ink hover:bg-raised focus-visible:outline-slate-400',
+    'border border-slate-300 bg-white text-ink hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-slate-400',
   danger: 'border border-red-200 bg-white text-negative hover:bg-red-50 focus-visible:outline-red-600',
   ghost: 'text-slate-600 hover:bg-raised hover:text-ink focus-visible:outline-slate-400',
 }
@@ -45,7 +47,7 @@ export function Button({
       disabled={disabled || isLoading}
       aria-busy={isLoading}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors active:translate-y-px',
+        'inline-flex shrink-0 items-center justify-center rounded-md font-semibold whitespace-nowrap transition-all duration-200 active:scale-[0.98]',
         'focus-visible:outline-2 focus-visible:outline-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-60',
         VARIANT_CLASSES[variant],

@@ -4,7 +4,9 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { useDebounce } from '../../hooks/useDebounce'
 import { PATHS } from '../../routes/paths'
 import { cn } from '../../utils/cn'
+import type { WorkspaceMode } from '../../utils/workspaceMode'
 import { BrandWordmark } from './BrandMark'
+import { ModeSwitch } from './ModeSwitch'
 
 const SEARCH_DEBOUNCE_MS = 400
 
@@ -63,27 +65,29 @@ function CatalogSearch({ id, className }: { id: string; className?: string }) {
         onChange={(event) => setText(event.target.value)}
         placeholder="Buscar excavadora, grúa, rodillo…"
         autoComplete="off"
-        className="h-8 w-full rounded-md border border-slate-300 bg-white pr-3 pl-9 text-sm text-ink placeholder:text-slate-500 focus:border-ink focus:ring-2 focus:ring-slate-200 focus:outline-none"
+        className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pr-3 pl-9 text-sm text-ink transition-colors placeholder:text-slate-500 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/30 focus:outline-none"
       />
     </form>
   )
 }
 
 interface TopBarProps {
+  mode: WorkspaceMode
+  onModeChange: (mode: WorkspaceMode) => void
   onOpenMenu: () => void
   onToggleAssistant: () => void
   isAssistantOpen: boolean
 }
 
-/** 48px bar on the frame: the catalogue search in the middle and the assistant on the right. */
-export function TopBar({ onOpenMenu, onToggleAssistant, isAssistantOpen }: TopBarProps) {
+/** White header: the mode switcher on the left, the catalogue search in the middle, the assistant on the right. */
+export function TopBar({ mode, onModeChange, onOpenMenu, onToggleAssistant, isAssistantOpen }: TopBarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-12 items-center gap-2 bg-frame px-2 lg:static lg:px-0 lg:pr-2">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-2 sm:px-4 lg:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
         aria-label="Abrir menú"
-        className="flex size-10 items-center justify-center rounded-md text-slate-600 hover:bg-active lg:hidden"
+        className="flex size-10 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 lg:hidden"
       >
         <Menu className="size-5" />
       </button>
@@ -91,15 +95,16 @@ export function TopBar({ onOpenMenu, onToggleAssistant, isAssistantOpen }: TopBa
         <BrandWordmark />
       </Link>
 
-      <CatalogSearch id="topbar-search" className="mx-auto hidden w-full max-w-[548px] sm:block" />
+      <ModeSwitch mode={mode} onChange={onModeChange} className="hidden w-[260px] shrink-0 lg:grid" />
+      <CatalogSearch id="topbar-search" className="mx-auto hidden w-full max-w-[480px] sm:block" />
 
       <button
         type="button"
         onClick={onToggleAssistant}
         aria-expanded={isAssistantOpen}
         className={cn(
-          'ml-auto flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-active sm:ml-0',
-          isAssistantOpen && 'bg-active text-ink',
+          'ml-auto flex h-9 shrink-0 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:shadow-sm sm:ml-0',
+          isAssistantOpen && 'border-brand bg-accent-tint text-ink',
         )}
       >
         <Sparkles className="size-4 text-accent" aria-hidden="true" />

@@ -122,12 +122,12 @@ export function ImageUploader({ onChange, onBusyChange, error }: ImageUploaderPr
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          'flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors',
-          isDragging ? 'border-ink bg-raised' : 'border-slate-300 bg-white hover:border-ink hover:bg-slate-50',
+          'flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200',
+          isDragging ? 'scale-[1.01] border-brand bg-accent-tint' : 'border-slate-300 bg-white hover:border-brand hover:bg-amber-50/40',
           items.length >= MAX_IMAGES && 'pointer-events-none opacity-50',
         )}
       >
-        <ImagePlus className="size-8 text-accent-ink" aria-hidden="true" />
+        <ImagePlus className="size-9 text-brand-strong" aria-hidden="true" />
         <span className="text-sm font-medium text-slate-700">Arrastra tus fotos aquí o haz clic para elegirlas</span>
         <span className="text-xs text-slate-500">JPG, PNG o WEBP · máximo 5 MB cada una · hasta {MAX_IMAGES} fotos</span>
         <input
@@ -163,9 +163,19 @@ export function ImageUploader({ onChange, onBusyChange, error }: ImageUploaderPr
               )}
 
               {item.state === 'uploading' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/50 text-white">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/55 px-3 text-white">
                   <Spinner size="sm" label="Subiendo foto" />
-                  <span className="text-xs font-medium">{item.progress}%</span>
+                  <span className="num text-xs font-semibold">{item.progress}%</span>
+                  <div
+                    role="progressbar"
+                    aria-label={`Subiendo foto ${index + 1}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={item.progress}
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-white/25"
+                  >
+                    <span className="block h-full rounded-full bg-brand transition-[width] duration-200" style={{ width: `${item.progress}%` }} />
+                  </div>
                 </div>
               )}
 

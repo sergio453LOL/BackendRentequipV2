@@ -10,6 +10,7 @@ import { Pagination } from '../components/common/Pagination'
 import { SkeletonLoader } from '../components/common/SkeletonLoader'
 import { PaymentModal } from '../components/payments/PaymentModal'
 import { ReservationCard } from '../components/reservations/ReservationCard'
+import { ReservationTimeline } from '../components/reservations/ReservationTimeline'
 import { useAuth } from '../hooks/useAuth'
 import { useFetch } from '../hooks/useFetch'
 import { useMutation } from '../hooks/useMutation'
@@ -156,7 +157,7 @@ function isReservationStatus(value: string): value is ReservationStatus {
 
 export default function MyReservationsPage() {
   const { user } = useAuth()
-  const [roleParam, setRoleParam] = useQueryParam('role', 'RENTER')
+  const [roleParam] = useQueryParam('role', 'RENTER')
   const [statusParam, setStatusParam] = useQueryParam('status')
   const role: ReservationRole = isReservationRole(roleParam) ? roleParam : 'RENTER'
   const status = isReservationStatus(statusParam) ? statusParam : undefined
@@ -202,60 +203,87 @@ export default function MyReservationsPage() {
     },
   })
 
-  return (
-    <div className="mx-auto max-w-[1200px] space-y-5">
-      <PageHeader
-        title="Reservas"
-        description={
-          role === 'RENTER'
-            ? 'Lo que tu empresa alquila a otras: pagos, comprobantes y estado de cada solicitud.'
-            : 'Lo que otras empresas reservan de tu flota: confirma, entrega y cierra cada alquiler.'
-        }
-        breadcrumbs={[{ label: 'Reservas' }]}
-      />
-
-      <div className="border-b border-line">
-        <div role="tablist" aria-label="Tipo de reserva" className="-mb-px flex gap-6">
-          {(['RENTER', 'OWNER'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={role === tab}
-              onClick={() => setRoleParam(tab)}
-              className={cn(
-                'h-10 border-b-2 text-sm transition-colors',
-                role === tab ? 'border-accent font-semibold text-ink' : 'border-transparent text-slate-600 hover:text-ink',
-              )}
-            >
-              {RESERVATION_ROLE_LABELS[tab]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div role="group" aria-label="Filtrar por estado" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        {([ALL, ...RESERVATION_STATUSES] as const).map((value) => {
-          const isSelected = (status ?? ALL) === value
-          const count = counts?.[value]
+  function renderActions(reservation: Reservation) {
+    const canPay =
+      role === 'RENTER' &&
+      reservation.paymentStatus === 'UNPAID' &&
+      (reservation.status === 'PENDING' || reservation.status === 'CONFIRMED')
+    return (
+      <>
+        {canPay && (
+          <Button size="sm" variant="action" onClick={() => setPayingReservation(reservation)} leftIcon={<CreditCard className="size-4" />}>
+            Pagar
+          </Button>
+        )}
+        {reservation.paymentStatus !== 'UNPAID' && (
+          <Button
+            size="sm"
+            variant="secondary"
+            isLoading={downloadingId === reservation.id}
+            onClick={() => void handleDownloadReceipt(reservation)}
+            leftIcon={<FileDown className="size-4" />}
+            aria-label={'Descargar comprobante PDF de ' + reservation.equipmentName}
+          >
+            Comprobante PDF
+          </Button>
+        )}
+        {availableActions(reservation, role, canManage).map((action) => {
+          const Icon = ACTION_ICONS[action]
+          const isNegative = action === 'reject' || action === 'cancel'
           return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => setStatusParam(value === ALL ? '' : value)}
-              className={cn(
-                'flex h-[61px] min-w-[120px] shrink-0 flex-col justify-center rounded-lg border px-3 text-left transition-colors sm:flex-1',
-                isSelected ? 'border-[1.5px] border-accent bg-accent-tint/50' : 'border-line bg-sheet hover:border-slate-300',
-              )}
+            <Button
+              key={action}
+              size="sm"
+              variant={isNegative ? 'ghost' : 'primary'}
+              disabled={performAction.isLoading}
+              onClick={() => setPending({ action, reservation })}
+              leftIcon={<Icon className="size-4" />}
             >
-              <span className="truncate text-[13px] text-slate-600">{STATUS_CARD_LABELS[value]}</span>
-              <span className={cn('num text-base font-semibold', count === 0 ? 'text-slate-500' : 'text-ink')}>
-                {count === undefined ? '–' : formatNumber(count)}
-              </span>
-            </button>
+              {ACTIONS[action].label}
+            </Button>
           )
         })}
+      </>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-[1100px] space-y-6">
+      <PageHeader
+        title={RESERVATION_ROLE_LABELS[role]}
+        description={
+          role === 'RENTER'
+            ? 'Tus alquileres en orden de fecha: paga, descarga el comprobante y sigue cada solicitud.'
+            : 'Lo que otras empresas reservan de tu flota: confirma, entrega y cierra cada alquiler.'
+        }
+        breadcrumbs={[{ label: RESERVATION_ROLE_LABELS[role] }]}
+      />
+
+      <div className="-mx-4 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0">
+        <div role="tablist" aria-label="Filtrar por estado" className="-mb-px flex gap-6">
+          {([ALL, ...RESERVATION_STATUSES] as const).map((value) => {
+            const isSelected = (status ?? ALL) === value
+            const count = counts?.[value]
+            return (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setStatusParam(value === ALL ? '' : value)}
+                className={cn(
+                  'flex h-11 shrink-0 items-center gap-2 border-b-2 text-sm font-semibold whitespace-nowrap transition-colors duration-200',
+                  isSelected ? 'border-brand text-ink' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-ink',
+                )}
+              >
+                {STATUS_CARD_LABELS[value]}
+                <span className={cn('num rounded-full px-2 py-0.5 text-xs', isSelected ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600')}>
+                  {count === undefined ? '–' : formatNumber(count)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {error && <ErrorState error={error} onRetry={refetch} />}
@@ -264,7 +292,7 @@ export default function MyReservationsPage() {
       {!error && data && data.totalElements === 0 && (
         <EmptyState
           icon={CalendarX2}
-          title={status ? `No tienes reservas "${RESERVATION_STATUS_LABELS[status].toLowerCase()}"` : 'Todavía no hay reservas'}
+          title={status ? 'No tienes reservas "' + RESERVATION_STATUS_LABELS[status].toLowerCase() + '"' : 'Todavía no hay reservas'}
           description={
             status
               ? 'Quita el filtro de estado para ver el resto de tu historial.'
@@ -275,13 +303,13 @@ export default function MyReservationsPage() {
           action={
             status ? (
               <Button variant="secondary" onClick={() => setStatusParam('')} leftIcon={<FilterX className="size-4" />}>
-                Quitar filtro
+                Ver todas
               </Button>
             ) : (
               role === 'RENTER' && (
                 <Link
                   to={PATHS.catalog}
-                  className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-white hover:bg-ink-hover"
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-action px-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-action-hover active:scale-[0.98]"
                 >
                   <Search className="size-4" aria-hidden="true" /> Explorar catálogo
                 </Link>
@@ -292,55 +320,20 @@ export default function MyReservationsPage() {
       )}
 
       {!error && data && data.totalElements > 0 && (
-        <>
-          <ul aria-busy={isLoading} className={cn('divide-y divide-rule rounded-lg border border-line transition-opacity', isLoading && 'opacity-60')}>
-            {data.content.map((reservation) => (
-              <li key={reservation.id}>
-                <ReservationCard
-                  reservation={reservation}
-                  role={role}
-                  actions={[
-                    role === 'RENTER' &&
-                      reservation.paymentStatus === 'UNPAID' &&
-                      (reservation.status === 'PENDING' || reservation.status === 'CONFIRMED') && (
-                        <Button key="pay" size="sm" variant="secondary" onClick={() => setPayingReservation(reservation)} leftIcon={<CreditCard className="size-4" />}>
-                          Pagar
-                        </Button>
-                      ),
-                    reservation.paymentStatus !== 'UNPAID' && (
-                      <Button
-                        key="receipt"
-                        size="sm"
-                        variant="ghost"
-                        isLoading={downloadingId === reservation.id}
-                        onClick={() => void handleDownloadReceipt(reservation)}
-                        leftIcon={<FileDown className="size-4" />}
-                      >
-                        Comprobante
-                      </Button>
-                    ),
-                    ...availableActions(reservation, role, canManage).map((action) => {
-                    const Icon = ACTION_ICONS[action]
-                    return (
-                      <Button
-                        key={action}
-                        size="sm"
-                        variant={action === 'reject' || action === 'cancel' ? 'ghost' : 'secondary'}
-                        disabled={performAction.isLoading}
-                        onClick={() => setPending({ action, reservation })}
-                        leftIcon={<Icon className="size-4" />}
-                      >
-                        {ACTIONS[action].label}
-                      </Button>
-                    )
-                  }),
-                  ]}
-                />
-              </li>
-            ))}
-          </ul>
+        <div aria-busy={isLoading} className={cn('space-y-4 transition-opacity', isLoading && 'opacity-60')}>
+          {role === 'RENTER' ? (
+            <ReservationTimeline reservations={data.content} renderActions={renderActions} />
+          ) : (
+            <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              {data.content.map((reservation) => (
+                <li key={reservation.id} className="transition-colors duration-200 hover:bg-slate-50/60">
+                  <ReservationCard reservation={reservation} role={role} actions={renderActions(reservation)} />
+                </li>
+              ))}
+            </ul>
+          )}
           <Pagination pageData={data} onPageChange={setPage} onSizeChange={setSize} isDisabled={isLoading} />
-        </>
+        </div>
       )}
 
       {payingReservation && (

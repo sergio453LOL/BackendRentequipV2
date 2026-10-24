@@ -153,6 +153,7 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
           </Button>
           <Button
             type="submit"
+            variant="action"
             form="reservation-form"
             isLoading={createReservation.isLoading}
             disabled={isUnavailable || isCheckingAvailability}

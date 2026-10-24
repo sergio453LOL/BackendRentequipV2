@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { ErrorState } from '../components/common/ErrorState'
 import { Pagination } from '../components/common/Pagination'
+import { StatusBadge } from '../components/common/StatusBadge'
 import { COMPACT_TIMELINE_DAYS, FleetTimeline, TIMELINE_DAYS, TimelineLegend } from '../components/equipment/FleetTimeline'
 import { useAuth } from '../hooks/useAuth'
 import { useFetch } from '../hooks/useFetch'
@@ -32,7 +33,7 @@ function plural(count: number, one: string, many: string): string {
 function Card({ title, aside, children, className }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) {
   const id = `card-${title.toLowerCase().replace(/\W+/g, '-')}`
   return (
-    <section aria-labelledby={id} className={cn('min-w-0 rounded-lg border border-line bg-sheet', className)}>
+    <section aria-labelledby={id} className={cn('min-w-0 rounded-xl border border-slate-200 bg-white transition-shadow duration-200 hover:shadow-md', className)}>
       <header className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 pt-4">
         <h2 id={id} className="text-base font-semibold text-ink">
           {title}
@@ -55,25 +56,30 @@ function ViewAll({ to, children = 'Ver todas', className }: { to: string; childr
 interface Kpi {
   label: string
   value: string
-  isZero?: boolean
   caption: ReactNode
+  /** Optional 0–1 ratio drawn as a bar under the value. */
+  ratio?: number
+  tone?: 'default' | 'action'
 }
 
-function KpiStrip({ items }: { items: Kpi[] }) {
+function KpiCards({ items }: { items: Kpi[] }) {
   return (
-    <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-line lg:grid-cols-4">
-      {items.map((item, index) => (
+    <dl className="grid gap-4 sm:grid-cols-3">
+      {items.map((item) => (
         <div
           key={item.label}
           className={cn(
-            'flex flex-col gap-1 px-5 py-4',
-            index % 2 === 1 && 'border-l border-line',
-            index >= 2 && 'border-t border-line lg:border-t-0',
-            index === 2 && 'lg:border-l',
+            'flex flex-col gap-2 rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+            item.tone === 'action' ? 'border-orange-200' : 'border-slate-200',
           )}
         >
-          <dt className="text-[13px] font-medium text-slate-600">{item.label}</dt>
-          <dd className={cn('num text-[28px] leading-9 font-normal', item.isZero ? 'text-slate-500' : 'text-ink')}>{item.value}</dd>
+          <dt className="text-sm font-semibold text-slate-600">{item.label}</dt>
+          <dd className={cn('num text-3xl leading-9 font-bold', item.tone === 'action' ? 'text-action' : 'text-ink')}>{item.value}</dd>
+          {item.ratio !== undefined && (
+            <dd className="h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+              <span className="block h-full rounded-full bg-brand" style={{ width: `${Math.round(item.ratio * 100)}%` }} />
+            </dd>
+          )}
           <dd className="text-xs text-slate-500">{item.caption}</dd>
         </div>
       ))}
@@ -142,14 +148,7 @@ function UpcomingHandovers({ handovers, today }: { handovers: Reservation[]; tod
                 {handover.renterCompanyName} · {plural(handover.totalDays, 'día', 'días')}
               </p>
             </div>
-            <span
-              className={cn(
-                'inline-flex h-5 flex-none items-center rounded-full px-2 text-xs font-medium whitespace-nowrap',
-                handover.paymentStatus === 'PAID' ? 'bg-[#dcfae5] text-[#04250e]' : 'bg-active text-slate-700',
-              )}
-            >
-              {handover.paymentStatus === 'PAID' ? 'Pagada' : 'Pago pendiente'}
-            </span>
+            <StatusBadge kind="payment" status={handover.paymentStatus} />
           </li>
         )
       })}
@@ -202,32 +201,27 @@ export default function DashboardPage() {
   const kpis: Kpi[] = data
     ? [
         {
-          label: 'Solicitudes por revisar',
-          value: formatNumber(data.pendingRequestsAsOwner),
-          isZero: data.pendingRequestsAsOwner === 0,
-          caption: data.pendingRequestsAsOwner > 0 ? <ViewAll className="text-xs text-ink underline" to={`${PATHS.reservations}?role=OWNER&status=PENDING`}>Revisar todas</ViewAll> : 'Nada pendiente',
-        },
-        {
-          label: 'Equipos publicados',
-          value: formatNumber(data.publishedEquipment),
-          isZero: data.publishedEquipment === 0,
-          caption: `${plural(bookedMachines, 'reservado', 'reservados')} en las próximas 4 semanas`,
-        },
-        {
           label: 'Ingresos estimados',
           value: formatCurrency(data.estimatedRevenue, data.currency),
-          isZero: data.estimatedRevenue === 0,
           caption: 'Alquileres confirmados, en curso y completados',
         },
         {
-          label: 'Mis alquileres activos',
-          value: formatNumber(data.activeReservationsAsRenter),
-          isZero: data.activeReservationsAsRenter === 0,
+          label: 'Flota activa',
+          value: `${formatNumber(bookedMachines)} / ${formatNumber(data.publishedEquipment)}`,
+          ratio: data.publishedEquipment > 0 ? bookedMachines / data.publishedEquipment : 0,
+          caption: 'Equipos con reservas en las próximas 4 semanas',
+        },
+        {
+          label: 'Solicitudes pendientes',
+          value: formatNumber(data.pendingRequestsAsOwner),
+          tone: data.pendingRequestsAsOwner > 0 ? 'action' : 'default',
           caption:
-            data.activeReservationsAsRenter === 0 ? (
-              <ViewAll className="text-xs text-ink underline" to={PATHS.catalog}>Buscar maquinaria</ViewAll>
+            data.pendingRequestsAsOwner > 0 ? (
+              <ViewAll className="text-xs font-semibold text-action underline" to={`${PATHS.reservations}?role=OWNER&status=PENDING`}>
+                Revisar solicitudes
+              </ViewAll>
             ) : (
-              <ViewAll className="text-xs text-ink underline" to={`${PATHS.reservations}?role=RENTER`}>Ver mis alquileres</ViewAll>
+              'Nada por revisar'
             ),
         },
       ]
@@ -237,13 +231,13 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-[1200px] space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[22px] leading-7 font-semibold text-ink">Panel</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Panel del arrendador</h1>
           <p className="mt-1 text-sm text-slate-600">{finding}</p>
         </div>
         {publisher && (
           <Link
             to={PATHS.publishEquipment}
-            className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-md bg-ink px-3.5 text-sm font-medium text-white transition-colors hover:bg-ink-hover"
+            className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-md bg-action px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-action-hover hover:shadow-md active:scale-[0.98]"
           >
             <Plus className="size-4" aria-hidden="true" /> Publicar maquinaria
           </Link>
@@ -253,9 +247,9 @@ export default function DashboardPage() {
       {metrics.error ? (
         <ErrorState error={metrics.error} onRetry={metrics.refetch} title="No pudimos cargar tus métricas" />
       ) : data ? (
-        <KpiStrip items={kpis} />
+        <KpiCards items={kpis} />
       ) : (
-        <div className="h-[118px] rounded-lg border border-line bg-raised" aria-busy="true" aria-label="Cargando métricas" />
+        <div className="grid h-[132px] gap-4 sm:grid-cols-3" aria-busy="true" aria-label="Cargando métricas">{[0, 1, 2].map((key) => <div key={key} className="rounded-xl border border-slate-200 bg-white" />)}</div>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">

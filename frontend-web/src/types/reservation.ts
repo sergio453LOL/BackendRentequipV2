@@ -55,3 +55,10 @@ export interface Availability {
   endDate: IsoDate
   available: boolean
 }
+
+/** A period in which a machine cannot be booked (no renter data). */
+export interface BlockedWindow {
+  startDate: IsoDate
+  endDate: IsoDate
+  status: ReservationStatus
+}

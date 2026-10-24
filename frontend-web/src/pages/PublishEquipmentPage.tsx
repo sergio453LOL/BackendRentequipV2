@@ -264,7 +264,7 @@ export default function PublishEquipmentPage() {
           <Button variant="secondary" onClick={() => navigate(-1)} disabled={publish.isLoading}>
             Cancelar
           </Button>
-          <Button type="submit" size="lg" isLoading={publish.isLoading} disabled={isUploading} leftIcon={<Send className="size-4" />}>
+          <Button type="submit" size="lg" variant="action" isLoading={publish.isLoading} disabled={isUploading} leftIcon={<Send className="size-4" />}>
             {isUploading ? 'Esperando las fotos…' : 'Publicar maquinaria'}
           </Button>
         </div>
