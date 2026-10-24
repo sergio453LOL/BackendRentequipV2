@@ -1,6 +1,6 @@
 import { LocateFixed, Send } from 'lucide-react'
 import { useCallback, useState, type ReactNode } from 'react'
-import { Controller, type Path } from 'react-hook-form'
+import { Controller, useWatch, type Path } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '../components/common/Button'
@@ -9,6 +9,7 @@ import { Input } from '../components/common/Input'
 import { PageHeader } from '../components/common/PageHeader'
 import { Select } from '../components/common/Select'
 import { Textarea } from '../components/common/Textarea'
+import { AdPreview } from '../components/equipment/AdPreview'
 import { ImageUploader } from '../components/equipment/ImageUploader'
 import { useAuth } from '../hooks/useAuth'
 import { useFetch } from '../hooks/useFetch'
@@ -68,12 +69,12 @@ const SERVER_FIELD_MAP: Partial<Record<string, Path<PublishFormValues>>> = {
 
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <section className="grid gap-6 rounded-lg border border-line p-5 sm:p-6 lg:grid-cols-3">
+    <section className="grid gap-6 rounded-2xl border border-slate-200/80 bg-white p-5 transition-shadow duration-300 focus-within:shadow-xl sm:p-6 lg:grid-cols-3 xl:grid-cols-1">
       <div>
-        <h2 className="font-semibold text-slate-900">{title}</h2>
+        <h2 className="text-base font-bold text-ink">{title}</h2>
         <p className="mt-1 text-sm text-slate-500">{description}</p>
       </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">{children}</div>
+      <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2 xl:col-span-1">{children}</div>
     </section>
   )
 }
@@ -112,6 +113,12 @@ export default function PublishEquipmentPage() {
       longitude: '',
     },
   })
+
+  // The preview follows the form as it is typed.
+  const draft = useWatch({ control })
+  const categoryNames = (categories.data ?? [])
+    .filter((category) => (draft.categoryIds ?? []).includes(category.id))
+    .map((category) => category.name)
 
   const publish = useMutation(equipmentService.create, {
     successMessage: (equipment) => `"${equipment.name}" ya está publicado en el catálogo`,
@@ -173,14 +180,15 @@ export default function PublishEquipmentPage() {
   const cityField = register('city')
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader
         title="Publicar maquinaria"
         description="Completa la ficha del equipo. Las empresas del catálogo podrán verlo y solicitar reservas."
         breadcrumbs={[{ label: 'Panel', to: PATHS.home }, { label: 'Publicar maquinaria' }]}
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="min-w-0 space-y-6">
         <Section title="Datos del equipo" description="Lo que verán primero las empresas en el catálogo.">
           <Input className="sm:col-span-2" label="Nombre" required placeholder="Excavadora hidráulica CAT 320" error={errors.name?.message} {...register('name')} />
           <Input label="Marca" required placeholder="Caterpillar" error={errors.brand?.message} {...register('brand')} />
@@ -269,6 +277,21 @@ export default function PublishEquipmentPage() {
           </Button>
         </div>
       </form>
+
+      <AdPreview
+        name={draft.name ?? ''}
+        brand={draft.brand ?? ''}
+        model={draft.model ?? ''}
+        year={draft.manufactureYear ?? ''}
+        city={draft.city ?? ''}
+        companyName={user?.companyName ?? ''}
+        dailyRate={draft.dailyRate ?? ''}
+        weeklyRate={draft.weeklyRate ?? ''}
+        securityDeposit={draft.securityDeposit ?? ''}
+        categories={categoryNames}
+        coverUrl={imageUrls[0]}
+      />
+      </div>
     </div>
   )
 }

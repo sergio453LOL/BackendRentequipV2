@@ -74,3 +74,34 @@
     transition-duration: 1ms !important;
   }
 }
+
+/* Catalogue map pins: an amber price tag pointing at the machine's location. */
+.re-pin {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  white-space: nowrap;
+  border-radius: 9999px;
+  background: #0f172a;
+  color: #fff;
+  font: 700 12px/1 "IBM Plex Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  padding: 6px 10px;
+  box-shadow: 0 6px 16px -4px rgb(15 23 42 / 0.45);
+  border: 2px solid #f59e0b;
+  transition: transform 150ms ease, background 150ms ease;
+}
+.re-pin::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #f59e0b;
+  border-bottom: 0;
+}
+.leaflet-marker-icon:hover .re-pin,
+.leaflet-marker-icon:focus .re-pin {
+  background: #c2410c;
+  transform: translate(-50%, calc(-100% - 6px)) scale(1.08);
+}

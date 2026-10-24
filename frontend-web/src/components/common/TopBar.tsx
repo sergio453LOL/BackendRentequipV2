@@ -82,7 +82,7 @@ interface TopBarProps {
 /** White header: the mode switcher on the left, the catalogue search in the middle, the assistant on the right. */
 export function TopBar({ mode, onModeChange, onOpenMenu, onToggleAssistant, isAssistantOpen }: TopBarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-2 sm:px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-2 sm:px-4 lg:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -95,7 +95,7 @@ export function TopBar({ mode, onModeChange, onOpenMenu, onToggleAssistant, isAs
         <BrandWordmark />
       </Link>
 
-      <ModeSwitch mode={mode} onChange={onModeChange} className="hidden w-[260px] shrink-0 lg:grid" />
+      <ModeSwitch mode={mode} onChange={onModeChange} className="hidden w-[280px] shrink-0 lg:grid" />
       <CatalogSearch id="topbar-search" className="mx-auto hidden w-full max-w-[480px] sm:block" />
 
       <button

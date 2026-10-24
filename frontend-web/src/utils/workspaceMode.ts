@@ -6,8 +6,8 @@ export type WorkspaceMode = 'renter' | 'owner'
 const STORAGE_KEY = 'rentequip.mode'
 
 export const MODE_LABELS: Record<WorkspaceMode, { title: string; caption: string }> = {
-  renter: { title: 'Arrendatario', caption: 'Alquilo maquinaria' },
-  owner: { title: 'Arrendador', caption: 'Alquilo mi flota' },
+  renter: { title: 'Arrendatario', caption: 'Comprador' },
+  owner: { title: 'Arrendador', caption: 'Vendedor' },
 }
 
 /** Where each mode starts. */

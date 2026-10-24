@@ -5,6 +5,8 @@ import { Button } from '../components/common/Button'
 import { ErrorState } from '../components/common/ErrorState'
 import { Pagination } from '../components/common/Pagination'
 import { StatusBadge } from '../components/common/StatusBadge'
+import { fleetOccupancy, revenueByMonth } from '../components/dashboard/ownerMetrics'
+import { OccupancyRing, RevenueChart } from '../components/dashboard/RevenueChart'
 import { COMPACT_TIMELINE_DAYS, FleetTimeline, TIMELINE_DAYS, TimelineLegend } from '../components/equipment/FleetTimeline'
 import { useAuth } from '../hooks/useAuth'
 import { useFetch } from '../hooks/useFetch'
@@ -33,7 +35,7 @@ function plural(count: number, one: string, many: string): string {
 function Card({ title, aside, children, className }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) {
   const id = `card-${title.toLowerCase().replace(/\W+/g, '-')}`
   return (
-    <section aria-labelledby={id} className={cn('min-w-0 rounded-xl border border-slate-200 bg-white transition-shadow duration-200 hover:shadow-md', className)}>
+    <section aria-labelledby={id} className={cn('min-w-0 rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:shadow-xl', className)}>
       <header className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-5 pt-4">
         <h2 id={id} className="text-base font-semibold text-ink">
           {title}
@@ -57,8 +59,8 @@ interface Kpi {
   label: string
   value: string
   caption: ReactNode
-  /** Optional 0–1 ratio drawn as a bar under the value. */
-  ratio?: number
+  /** Optional 0–1 ratio drawn as a ring beside the value. */
+  ring?: number
   tone?: 'default' | 'action'
 }
 
@@ -69,18 +71,20 @@ function KpiCards({ items }: { items: Kpi[] }) {
         <div
           key={item.label}
           className={cn(
-            'flex flex-col gap-2 rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
-            item.tone === 'action' ? 'border-orange-200' : 'border-slate-200',
+            'flex items-center justify-between gap-4 rounded-2xl border bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl',
+            item.tone === 'action' ? 'border-orange-200 bg-gradient-to-br from-white to-orange-50/60' : 'border-slate-200/80',
           )}
         >
-          <dt className="text-sm font-semibold text-slate-600">{item.label}</dt>
-          <dd className={cn('num text-3xl leading-9 font-bold', item.tone === 'action' ? 'text-action' : 'text-ink')}>{item.value}</dd>
-          {item.ratio !== undefined && (
-            <dd className="h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-              <span className="block h-full rounded-full bg-brand" style={{ width: `${Math.round(item.ratio * 100)}%` }} />
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <dt className="text-sm font-semibold text-slate-600">{item.label}</dt>
+            <dd className={cn('num text-3xl leading-9 font-bold tracking-tight', item.tone === 'action' ? 'text-action' : 'text-ink')}>{item.value}</dd>
+            <dd className="text-xs text-slate-500">{item.caption}</dd>
+          </div>
+          {item.ring !== undefined && (
+            <dd aria-hidden="true">
+              <OccupancyRing ratio={item.ring} />
             </dd>
           )}
-          <dd className="text-xs text-slate-500">{item.caption}</dd>
         </div>
       ))}
     </dl>
@@ -198,21 +202,24 @@ export default function DashboardPage() {
         : 'Sin solicitudes pendientes ni entregas en las próximas 4 semanas.'
 
   const data = metrics.data
+  const monthly = revenueByMonth(ownerReservations, today)
+  const currentMonthRevenue = monthly.find((item) => item.isCurrent)?.amount ?? 0
+  const occupancy = fleetOccupancy(ownerReservations, data?.publishedEquipment ?? 0, today)
   const kpis: Kpi[] = data
     ? [
         {
-          label: 'Ingresos estimados',
-          value: formatCurrency(data.estimatedRevenue, data.currency),
-          caption: 'Alquileres confirmados, en curso y completados',
+          label: `Ingresos de ${today.toLocaleDateString('es-PE', { month: 'long' })}`,
+          value: formatCurrency(currentMonthRevenue, data.currency),
+          caption: `Total estimado: ${formatCurrency(data.estimatedRevenue, data.currency)}`,
         },
         {
-          label: 'Flota activa',
-          value: `${formatNumber(bookedMachines)} / ${formatNumber(data.publishedEquipment)}`,
-          ratio: data.publishedEquipment > 0 ? bookedMachines / data.publishedEquipment : 0,
-          caption: 'Equipos con reservas en las próximas 4 semanas',
+          label: 'Tasa de ocupación',
+          value: `${Math.round(occupancy * 100)}%`,
+          ring: occupancy,
+          caption: `${formatNumber(bookedMachines)} de ${formatNumber(data.publishedEquipment)} equipos con reservas · 30 días`,
         },
         {
-          label: 'Solicitudes pendientes',
+          label: 'Solicitudes por aprobar',
           value: formatNumber(data.pendingRequestsAsOwner),
           tone: data.pendingRequestsAsOwner > 0 ? 'action' : 'default',
           caption:
@@ -250,6 +257,15 @@ export default function DashboardPage() {
         <KpiCards items={kpis} />
       ) : (
         <div className="grid h-[132px] gap-4 sm:grid-cols-3" aria-busy="true" aria-label="Cargando métricas">{[0, 1, 2].map((key) => <div key={key} className="rounded-xl border border-slate-200 bg-white" />)}</div>
+      )}
+
+      {data && owned.data && (
+        <Card
+          title="Ingresos por mes"
+          aside={<span className="text-xs font-medium text-slate-500">Días alquilados × tarifa diaria</span>}
+        >
+          <RevenueChart months={monthly} currency={data.currency} />
+        </Card>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">

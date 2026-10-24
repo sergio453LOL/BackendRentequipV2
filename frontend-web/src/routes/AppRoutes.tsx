@@ -6,6 +6,7 @@ import { PATHS } from './paths'
 import { GuestRoute, PrivateRoute } from './PrivateRoute'
 import { PUBLISHER_ROLES } from './roles'
 
+const LandingPage = lazy(() => import('../pages/LandingPage'))
 const LoginPage = lazy(() => import('../pages/LoginPage'))
 const RegisterPage = lazy(() => import('../pages/RegisterPage'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage'))
@@ -20,6 +21,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<FullPageSpinner />}>
       <Routes>
+        <Route path={PATHS.landing} element={<LandingPage />} />
         <Route element={<GuestRoute />}>
           <Route path={PATHS.login} element={<LoginPage />} />
           <Route path={PATHS.register} element={<RegisterPage />} />

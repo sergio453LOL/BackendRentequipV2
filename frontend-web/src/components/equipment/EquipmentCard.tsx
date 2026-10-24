@@ -10,13 +10,13 @@ export function EquipmentCard({ equipment }: { equipment: EquipmentSummary }) {
   return (
     <Link
       to={buildPath.equipmentDetail(equipment.id)}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
     >
       <div className="relative overflow-hidden bg-raised">
         <EquipmentImage
           src={equipment.primaryImageUrl}
           alt={equipment.name}
-          className="aspect-[4/3] w-full transition-transform duration-300 group-hover:scale-[1.03]"
+          className="aspect-[4/3] w-full transition-transform duration-500 ease-out group-hover:scale-110"
         />
         <span className="absolute top-3 left-3">
           <StatusBadge kind="equipment" status={equipment.status} />

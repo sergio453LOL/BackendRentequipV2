@@ -56,7 +56,7 @@ export function Sidebar({ items, mode, onModeChange, isOpen, onClose }: SidebarP
         isOpen ? 'flex' : 'hidden',
       )}
     >
-      <div className="flex h-14 items-center gap-2.5 px-5">
+      <div className="flex h-16 items-center gap-2.5 px-5">
         <Link to={PATHS.home} onClick={onClose} className="flex items-center gap-2.5" aria-label="RentEquip, ir al panel">
           <BrandMark className="size-7 text-brand" />
           <span className="text-base font-bold tracking-tight text-white">RentEquip</span>

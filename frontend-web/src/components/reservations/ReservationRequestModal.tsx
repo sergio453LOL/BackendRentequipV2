@@ -10,6 +10,7 @@ import { PATHS } from '../../routes/paths'
 import { ENDPOINTS } from '../../services/endpoints'
 import { reservationService } from '../../services/reservationService'
 import type { Availability, Equipment, Payment, Reservation } from '../../types'
+import { celebrate } from '../../utils/celebrate'
 import { applyServerFieldErrors } from '../../utils/formErrors'
 import { formatCurrency, rentalDays, todayIso } from '../../utils/format'
 import { Button } from '../common/Button'
@@ -94,7 +95,10 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
   const createReservation = useMutation(reservationService.create, {
     successMessage: 'Solicitud creada. Completa el pago para asegurarla.',
     errorTitle: 'No se pudo enviar la solicitud',
-    onSuccess: (reservation) => setStep({ name: 'payment', reservation }),
+    onSuccess: (reservation) => {
+      celebrate()
+      setStep({ name: 'payment', reservation })
+    },
     onError: (error) => applyServerFieldErrors(error, setError),
   })
 

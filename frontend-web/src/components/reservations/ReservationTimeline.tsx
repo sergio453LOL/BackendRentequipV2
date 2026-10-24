@@ -6,6 +6,7 @@ import type { Reservation, ReservationStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { formatCurrency, formatDateRange, parseIsoDate, reservationCode } from '../../utils/format'
 import { StatusBadge } from '../common/StatusBadge'
+import { ReservationTracker } from './ReservationTracker'
 
 const NODE_CLASSES: Record<ReservationStatus, string> = {
   PENDING: 'bg-status-amber',
@@ -51,7 +52,7 @@ export function ReservationTimeline({ reservations, renderActions }: Reservation
               <span className={cn('relative mt-5 size-3 rounded-full ring-4 ring-slate-50', NODE_CLASSES[reservation.status])} />
             </div>
 
-            <article className="mb-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md sm:p-5">
+            <article className="mb-4 rounded-2xl border border-slate-200/80 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div className="min-w-0">
                   <Link
@@ -83,8 +84,10 @@ export function ReservationTimeline({ reservations, renderActions }: Reservation
                 )}
               </div>
 
+              <ReservationTracker reservation={reservation} />
+
               {reservation.notes && (
-                <p className="mt-3 flex items-start gap-1.5 text-sm text-slate-600">
+                <p className="mt-4 flex items-start gap-1.5 text-sm text-slate-600">
                   <MessageSquareText className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
                   <span className="line-clamp-2">{reservation.notes}</span>
                 </p>

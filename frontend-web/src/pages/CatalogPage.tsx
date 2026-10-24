@@ -1,5 +1,6 @@
-import { FilterX, SearchX } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { FilterX, LayoutGrid, Map as MapIcon, SearchX } from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
@@ -22,6 +23,37 @@ import { cn } from '../utils/cn'
 import { formatNumber } from '../utils/format'
 
 const ALL = 'all'
+
+// Leaflet only downloads when someone opens the map.
+const EquipmentMap = lazy(() => import('../components/equipment/EquipmentMap'))
+
+type CatalogView = 'grid' | 'map'
+
+function ViewToggle({ view, onChange }: { view: CatalogView; onChange: (view: CatalogView) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Vista del catálogo" className="relative grid h-9 grid-cols-2 rounded-lg bg-slate-100 p-1 ring-1 ring-slate-200/80 ring-inset">
+      {([
+        { value: 'grid', label: 'Cuadrícula', icon: LayoutGrid },
+        { value: 'map', label: 'Mapa', icon: MapIcon },
+      ] as const).map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={view === value}
+          onClick={() => onChange(value)}
+          className={cn('relative flex items-center justify-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors', view === value ? 'text-ink' : 'text-slate-500 hover:text-ink')}
+        >
+          {view === value && (
+            <motion.span layoutId="catalog-view" className="absolute inset-0 rounded-md bg-white shadow-sm" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+          )}
+          <Icon className="relative size-4" aria-hidden="true" />
+          <span className="relative">{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 interface CountFilters {
   q?: string
@@ -105,6 +137,8 @@ export default function CatalogPage() {
   const [query] = useQueryParam('q')
   const [categoryId, setCategoryId] = useQueryParam('categoryId')
   const [city, setCity] = useQueryParam('city')
+  const [viewParam, setViewParam] = useQueryParam('view')
+  const view: CatalogView = viewParam === 'map' ? 'map' : 'grid'
   const { page, size, setPage, setSize } = usePagination()
 
   const categories = useFetch<EquipmentCategory[]>(ENDPOINTS.categories)
@@ -150,6 +184,7 @@ export default function CatalogPage() {
           {city && ` en ${city}`}
         </p>
         <div className="flex items-end gap-2">
+          <ViewToggle view={view} onChange={(next) => setViewParam(next === 'map' ? 'map' : '')} />
           <Select
             label="Ciudad"
             placeholder="Todas las ciudades"
@@ -189,7 +224,13 @@ export default function CatalogPage() {
         />
       )}
 
-      {!results.error && results.data && results.data.totalElements > 0 && (
+      {!results.error && results.data && results.data.totalElements > 0 && view === 'map' && (
+        <Suspense fallback={<div className="h-[560px] rounded-2xl border border-slate-200/80 bg-white" aria-busy="true" aria-label="Cargando mapa" />}>
+          <EquipmentMap machines={results.data.content} />
+        </Suspense>
+      )}
+
+      {!results.error && results.data && results.data.totalElements > 0 && view === 'grid' && (
         <>
           <ul
             aria-busy={results.isLoading}

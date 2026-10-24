@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { LoginLocationState } from '../contexts/AuthContextDefinition'
 import { useAuth } from '../hooks/useAuth'
 import type { UserRole } from '../types'
+import { MODE_HOME, readStoredMode } from '../utils/workspaceMode'
 import { PATHS } from './paths'
 
 interface PrivateRouteProps {
@@ -32,5 +33,5 @@ export function GuestRoute() {
   const { isAuthenticated } = useAuth()
   const location = useLocation()
   const from = (location.state as LoginLocationState | null)?.from
-  return isAuthenticated ? <Navigate to={from ?? PATHS.home} replace /> : <Outlet />
+  return isAuthenticated ? <Navigate to={from ?? MODE_HOME[readStoredMode()]} replace /> : <Outlet />
 }

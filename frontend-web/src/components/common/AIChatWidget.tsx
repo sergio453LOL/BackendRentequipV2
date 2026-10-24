@@ -87,7 +87,7 @@ export function AIChatWidget({ isOpen, onClose }: AIChatWidgetProps) {
   return (
         <section
           aria-label="Asistente RentEquip"
-          className="fixed top-16 right-2 z-40 flex h-[min(36rem,calc(100vh-4.5rem))] w-[calc(100vw-1rem)] max-w-sm animate-[fade-in_150ms_ease-out] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_12px_32px_rgba(0,0,0,0.12)] sm:right-4"
+          className="fixed top-[72px] right-2 z-40 flex h-[min(36rem,calc(100vh-4.5rem))] w-[calc(100vw-1rem)] max-w-sm animate-[fade-in_150ms_ease-out] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_12px_32px_rgba(0,0,0,0.12)] sm:right-4"
         >
           <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
             <div className="min-w-0">

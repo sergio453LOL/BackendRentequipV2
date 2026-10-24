@@ -56,9 +56,9 @@ function PublishButton() {
 function MachineCard({ machine, outlook }: { machine: EquipmentSummary; outlook: MachineOutlook }) {
   const occupancy = outlook.bookedDays / OCCUPANCY_WINDOW_DAYS
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
       <Link to={buildPath.equipmentDetail(machine.id)} className="relative block overflow-hidden" tabIndex={-1} aria-hidden="true">
-        <EquipmentImage src={machine.primaryImageUrl} alt="" className="aspect-[16/10] w-full transition-transform duration-300 group-hover:scale-[1.03]" />
+        <EquipmentImage src={machine.primaryImageUrl} alt="" className="aspect-[16/10] w-full transition-transform duration-500 ease-out group-hover:scale-110" />
         <span className="absolute top-3 left-3">
           <StatusBadge kind="equipment" status={machine.status} />
         </span>

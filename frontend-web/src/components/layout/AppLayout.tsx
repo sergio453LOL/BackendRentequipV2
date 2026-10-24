@@ -1,4 +1,5 @@
-import { CalendarRange, ClipboardList, LayoutDashboard, PlusCircle, Search, Truck } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { CalendarRange, ClipboardList, LayoutDashboard, PlusCircle, Search, Sparkles, Truck } from 'lucide-react'
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { PATHS } from '../../routes/paths'
@@ -76,6 +77,28 @@ export function AppLayout() {
         </main>
       </div>
       <AIChatWidget isOpen={isAssistantOpen} onClose={closeAssistant} />
+
+      {/* While exploring, the assistant also floats at hand. */}
+      <AnimatePresence>
+        {mode === 'renter' && !isAssistantOpen && (
+          <motion.button
+            type="button"
+            onClick={toggleAssistant}
+            initial={{ opacity: 0, scale: 0.8, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 12 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            aria-label="Abrir asistente de IA"
+            className="fixed right-5 bottom-5 z-30 flex h-12 items-center gap-2 rounded-full bg-ink pr-5 pl-4 text-sm font-semibold text-white shadow-[0_10px_30px_-6px_rgba(15,23,42,0.55)] ring-2 ring-brand/70"
+          >
+            <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-brand/25 [animation-duration:2.6s] motion-reduce:hidden" aria-hidden="true" />
+            <Sparkles className="size-5 text-brand" aria-hidden="true" />
+            Pregúntale a la IA
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
