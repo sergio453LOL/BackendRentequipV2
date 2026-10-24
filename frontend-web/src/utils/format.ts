@@ -12,7 +12,7 @@ export function formatNumber(value: number): string {
 }
 
 /** Parses `YYYY-MM-DD` as a local calendar date, avoiding the UTC shift of `new Date(isoString)`. */
-function parseIsoDate(date: IsoDate): Date {
+export function parseIsoDate(date: IsoDate): Date {
   const [year, month, day] = date.split('-').map(Number)
   return new Date(year, month - 1, day)
 }
@@ -39,4 +39,26 @@ export function rentalDays(start: IsoDate, end: IsoDate): number {
 /** Human-friendly reservation code printed on receipts, e.g. RE-000123. */
 export function reservationCode(reservationId: number): string {
   return `RE-${String(reservationId).padStart(6, '0')}`
+}
+
+/** Compact range for lists: "9–13 nov." in one month, "27 oct. – 2 nov." across two. */
+export function formatDateRange(start: IsoDate, end: IsoDate): string {
+  const from = parseIsoDate(start)
+  const to = parseIsoDate(end)
+  const month = (date: Date) => date.toLocaleDateString(LOCALE, { month: 'short' }).toLowerCase()
+  if (from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear()) {
+    return `${from.getDate()}–${to.getDate()} ${month(to)}`
+  }
+  return `${from.getDate()} ${month(from)} – ${to.getDate()} ${month(to)}`
+}
+
+export function addDays(date: Date, days: number): Date {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+/** Whole days from `from` to `to` (both local midnights). */
+export function daysBetween(from: Date, to: Date): number {
+  return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY)
 }

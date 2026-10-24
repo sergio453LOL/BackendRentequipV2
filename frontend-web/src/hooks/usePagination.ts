@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
+export const PAGE_SIZE_OPTIONS = [12, 24, 48, 96] as const
 
 const PAGE_PARAM = 'page'
 const SIZE_PARAM = 'size'

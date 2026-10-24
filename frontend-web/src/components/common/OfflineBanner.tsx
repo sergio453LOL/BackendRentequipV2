@@ -7,7 +7,7 @@ export function OfflineBanner() {
 
   return (
     <div role="status" className="flex items-center justify-center gap-2 bg-slate-900 px-4 py-2 text-sm text-white">
-      <WifiOff className="size-4 text-brand-400" aria-hidden="true" />
+      <WifiOff className="size-4 text-white" aria-hidden="true" />
       Sin conexión a internet. Los cambios no se guardarán hasta que vuelvas a conectarte.
     </div>
   )

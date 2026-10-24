@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       >
         <AlertOctagon className="size-12 text-red-500" aria-hidden="true" />
         <div className="space-y-1">
-          <h1 className="text-xl font-bold text-slate-900">Algo salió mal</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Algo salió mal</h1>
           <p className="max-w-md text-sm text-slate-600">
             Ocurrió un error inesperado al mostrar esta pantalla. Puedes reintentar o volver a cargar la página.
           </p>

@@ -1,23 +1,60 @@
 @import "tailwindcss";
 
+/*
+ * RentEquip — "framed sheet": a tinted L-frame (sidebar + top bar) holds the work on a white sheet with a
+ * 1px edge and no shadow. The chrome stays grey; the one hue is the machinery's amber, used on data
+ * (booked days, the selected tab, the logo), never on buttons. The primary action is near-black ink.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #fffbeb;
-  --color-brand-100: #fef3c7;
-  --color-brand-200: #fde68a;
-  --color-brand-300: #fcd34d;
-  --color-brand-400: #fbbf24;
-  --color-brand-500: #f59e0b;
-  --color-brand-600: #d97706;
-  --color-brand-700: #b45309;
-  --color-brand-800: #92400e;
-  --color-brand-900: #78350f;
+  /* Neutral ramp from the style's tokens, so every existing slate-* utility takes the new greys. */
+  --color-slate-50: #f9fbfc;  /* frame */
+  --color-slate-100: #f4f6f8; /* raised */
+  --color-slate-200: #e8eaec; /* card edge */
+  --color-slate-300: #cdced1; /* control border */
+  --color-slate-400: #8b8d90; /* icons only: 3.3:1 */
+  --color-slate-500: #5d5f60; /* secondary text: 6.4:1 */
+  --color-slate-600: #4a4c4e;
+  --color-slate-700: #353736;
+  --color-slate-800: #232427;
+  --color-slate-900: #131416; /* ink */
+  --color-slate-950: #0b0c0d;
+
+  --color-frame: #f9fbfc;
+  --color-sheet: #ffffff;
+  --color-raised: #f4f6f8;
+  --color-active: #ebedee;
+  --color-line: #e8eaec;
+  --color-rule: #f0f1f2;
+  --color-ink: #131416;
+  --color-ink-hover: #2e3033;
+
+  /* The machinery amber: marks at 3:1+ (#a86f0c), text at 5.9:1 (#8a5a08), a pale tint for booked areas. */
+  --color-accent: #a86f0c;
+  --color-accent-ink: #8a5a08;
+  --color-accent-tint: #f3e7cf;
+
+  --color-positive: #1e7b4f;
+  --color-negative: #c4242a;
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-sheet: 16px;
 }
 
 @layer base {
+  html {
+    font-size: 16px;
+  }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-frame text-ink antialiased;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  /* Every figure that lines up or updates uses tabular digits. */
+  .num {
+    font-variant-numeric: tabular-nums;
   }
 }
 

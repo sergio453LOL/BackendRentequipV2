@@ -124,7 +124,7 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
   if (step.name !== 'details') {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title={STEP_TITLES[step.name]}>
-        <p className="mb-4 text-xs font-medium tracking-wide text-slate-500 uppercase">Paso {STEP_NUMBERS[step.name]} de 3</p>
+        <p className="mb-4 text-[13px] font-medium text-slate-600">Paso {STEP_NUMBERS[step.name]} de 3</p>
         {step.name === 'payment' ? (
           <PaymentForm
             reservation={step.reservation}
@@ -162,7 +162,7 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
         </>
       }
     >
-      <p className="mb-4 text-xs font-medium tracking-wide text-slate-500 uppercase">Paso 1 de 3</p>
+      <p className="mb-4 text-[13px] font-medium text-slate-600">Paso 1 de 3</p>
       <form id="reservation-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
         <p className="text-sm text-slate-600">
           Estás solicitando <span className="font-semibold text-slate-900">{equipment.name}</span>. El propietario
@@ -213,7 +213,7 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
           {...register('notes')}
         />
 
-        <dl className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
+        <dl className="space-y-2 rounded-lg bg-slate-50 p-4 text-sm">
           <div className="flex justify-between">
             <dt className="text-slate-500">
               {formatCurrency(equipment.dailyRate, equipment.currency)} × {days} {days === 1 ? 'día' : 'días'}
@@ -226,7 +226,7 @@ export function ReservationRequestModal({ equipment, isOpen, onClose }: Reservat
           </div>
           <div className="flex justify-between border-t border-slate-200 pt-2 text-base">
             <dt className="font-semibold text-slate-900">Total estimado</dt>
-            <dd className="font-bold text-slate-900">
+            <dd className="font-semibold text-slate-900">
               {formatCurrency(rentalAmount + equipment.securityDeposit, equipment.currency)}
             </dd>
           </div>

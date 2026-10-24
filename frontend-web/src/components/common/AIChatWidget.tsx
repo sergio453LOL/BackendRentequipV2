@@ -1,4 +1,4 @@
-import { Bot, MessageCircle, Send, Sparkles, X } from 'lucide-react'
+import { Send, Sparkles, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { buildPath } from '../../routes/paths'
@@ -25,12 +25,16 @@ function createMessage(role: ChatRole, content: string, extra: Partial<ChatMessa
   return { id: crypto.randomUUID(), role, content, createdAt: new Date(), ...extra }
 }
 
+interface AIChatWidgetProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
 /**
- * Floating assistant. Questions go to the backend, which asks Claude to pick machines from the live
- * catalogue (or uses a local keyword recommender when no model is configured).
+ * Assistant panel, opened from the top bar. Questions go to the backend, which asks Claude to pick
+ * machines from the live catalogue (or uses a local keyword recommender when no model is configured).
  */
-export function AIChatWidget() {
-  const [isOpen, setIsOpen] = useState(false)
+export function AIChatWidget({ isOpen, onClose }: AIChatWidgetProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [createMessage('assistant', GREETING)])
   const [draft, setDraft] = useState('')
   const [isReplying, setIsReplying] = useState(false)
@@ -78,26 +82,23 @@ export function AIChatWidget() {
 
   const showSuggestions = messages.length === 1 && !isReplying
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6">
-      {isOpen && (
         <section
           aria-label="Asistente RentEquip"
-          className="flex h-[min(34rem,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-sm animate-[slide-up_200ms_ease-out] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          className="fixed top-14 right-2 z-40 flex h-[min(36rem,calc(100vh-4.5rem))] w-[calc(100vw-1rem)] max-w-sm animate-[fade-in_150ms_ease-out] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_12px_32px_rgba(0,0,0,0.12)] sm:right-4"
         >
-          <header className="flex items-center gap-3 bg-slate-900 px-4 py-3 text-white">
-            <span className="flex size-8 items-center justify-center rounded-full bg-brand-500 text-slate-900">
-              <Bot className="size-5" aria-hidden="true" />
-            </span>
+          <header className="flex items-center gap-3 border-b border-rule px-4 py-3">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold">Asistente RentEquip</h2>
-              <p className="text-xs text-slate-400">Recomendaciones del catálogo con IA</p>
+              <h2 className="text-sm font-semibold text-ink">Asistente RentEquip</h2>
+              <p className="text-xs text-slate-500">Te recomienda maquinaria del catálogo para tu trabajo</p>
             </div>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={onClose}
               aria-label="Cerrar asistente"
-              className="ml-auto rounded p-1 hover:bg-white/10"
+              className="ml-auto rounded-md p-1.5 text-slate-500 hover:bg-raised hover:text-ink"
             >
               <X className="size-4" />
             </button>
@@ -108,10 +109,10 @@ export function AIChatWidget() {
               <div key={message.id} className={cn('flex flex-col gap-2', message.role === 'user' && 'items-end')}>
                 <p
                   className={cn(
-                    'max-w-[88%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap',
+                    'max-w-[88%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap',
                     message.role === 'user'
-                      ? 'rounded-br-sm bg-brand-500 text-slate-900'
-                      : 'rounded-bl-sm bg-slate-100 text-slate-800',
+                      ? 'bg-ink text-white'
+                      : 'bg-raised text-ink',
                     message.isError && 'bg-red-50 text-red-700',
                   )}
                 >
@@ -121,7 +122,7 @@ export function AIChatWidget() {
                   <ul className="w-full space-y-2" aria-label="Maquinaria recomendada">
                     {message.recommendations.map((equipment) => (
                       <li key={equipment.id}>
-                        <RecommendationCard equipment={equipment} onOpen={() => setIsOpen(false)} />
+                        <RecommendationCard equipment={equipment} onOpen={onClose} />
                       </li>
                     ))}
                   </ul>
@@ -132,14 +133,14 @@ export function AIChatWidget() {
             {showSuggestions && (
               <div className="space-y-2 pt-1">
                 <p className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                  <Sparkles className="size-3.5 text-brand-500" aria-hidden="true" /> Prueba preguntando:
+                  <Sparkles className="size-3.5 text-accent" aria-hidden="true" /> Prueba preguntando:
                 </p>
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     onClick={() => void ask(suggestion)}
-                    className="block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition hover:border-brand-400 hover:bg-brand-50"
+                    className="block w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition hover:border-ink hover:bg-raised"
                   >
                     {suggestion}
                   </button>
@@ -169,30 +170,18 @@ export function AIChatWidget() {
               placeholder="¿Qué máquina necesito para…?"
               autoComplete="off"
               disabled={isReplying}
-              className="h-10 flex-1 rounded-full border border-slate-300 px-4 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none disabled:bg-slate-50"
+              className="h-9 flex-1 rounded-md border border-slate-300 px-3 text-sm focus:border-ink focus:ring-2 focus:ring-slate-200 focus:outline-none disabled:bg-slate-50"
             />
             <button
               type="submit"
               disabled={!draft.trim() || isReplying}
               aria-label="Enviar pregunta"
-              className="flex size-10 items-center justify-center rounded-full bg-brand-500 text-slate-900 transition hover:bg-brand-400 disabled:opacity-50"
+              className="flex size-9 items-center justify-center rounded-md bg-ink text-white transition hover:bg-ink-hover disabled:opacity-50"
             >
               <Send className="size-4" />
             </button>
           </form>
         </section>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={isOpen}
-        aria-label={isOpen ? 'Cerrar asistente' : 'Abrir asistente de IA'}
-        className="flex size-14 items-center justify-center rounded-full bg-slate-900 text-brand-400 shadow-lg transition hover:scale-105 hover:bg-slate-800"
-      >
-        {isOpen ? <X className="size-6" /> : <MessageCircle className="size-6" />}
-      </button>
-    </div>
   )
 }
 
@@ -201,9 +190,9 @@ function RecommendationCard({ equipment, onOpen }: { equipment: EquipmentSummary
     <Link
       to={buildPath.equipmentDetail(equipment.id)}
       onClick={onOpen}
-      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2 transition hover:border-brand-400 hover:shadow-sm"
+      className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2 transition hover:border-slate-400"
     >
-      <EquipmentImage src={equipment.primaryImageUrl} alt={equipment.name} className="size-12 shrink-0 rounded-lg" />
+      <EquipmentImage src={equipment.primaryImageUrl} alt={equipment.name} className="size-12 shrink-0 rounded-md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-900">{equipment.name}</p>
         <p className="truncate text-xs text-slate-500">

@@ -2,9 +2,9 @@ import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Payment, PaymentStatus, PaymentType, Reservation } from '../../types'
 import { formatCurrency, formatDate, reservationCode } from '../../utils/format'
 
-const BRAND = '#f59e0b'
-const INK = '#0f172a'
-const MUTED = '#64748b'
+const BRAND = '#a86f0c'
+const INK = '#131416'
+const MUTED = '#5d5f60'
 const LINE = '#e2e8f0'
 
 const styles = StyleSheet.create({

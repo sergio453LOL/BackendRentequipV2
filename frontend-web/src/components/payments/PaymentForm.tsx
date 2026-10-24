@@ -72,7 +72,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-      <dl className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
+      <dl className="space-y-2 rounded-lg bg-slate-50 p-4 text-sm">
         <div className="flex justify-between">
           <dt className="text-slate-600">Alquiler · se cobra ahora</dt>
           <dd className="font-semibold text-slate-900">{money(reservation.rentalAmount)}</dd>
@@ -83,7 +83,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
         </div>
         <div className="flex justify-between border-t border-slate-200 pt-2 text-base">
           <dt className="font-semibold text-slate-900">Total</dt>
-          <dd className="font-bold text-slate-900">{money(reservation.totalAmount)}</dd>
+          <dd className="font-semibold text-slate-900">{money(reservation.totalAmount)}</dd>
         </div>
       </dl>
 
@@ -105,7 +105,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
             }}
           />
           {brand !== 'unknown' && (
-            <span className="absolute top-9 right-3 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white">
+            <span className="absolute top-9 right-3 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">
               {BRAND_LABELS[brand]}
             </span>
           )}
@@ -136,7 +136,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
               <button
                 type="button"
                 onClick={() => setValue('number', card.number, { shouldValidate: true })}
-                className="font-mono text-brand-700 hover:underline"
+                className="num text-accent-ink hover:underline"
               >
                 {card.number}
               </button>{' '}
@@ -148,7 +148,7 @@ export function PaymentForm({ reservation, onPaid, onSkip }: PaymentFormProps) {
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-1.5 text-xs text-slate-500">
-          <ShieldCheck className="size-4 text-emerald-600" aria-hidden="true" />
+          <ShieldCheck className="size-4 text-slate-500" aria-hidden="true" />
           Tu tarjeta se tokeniza en el navegador; RentEquip nunca recibe el número.
         </p>
         <div className="flex gap-2">

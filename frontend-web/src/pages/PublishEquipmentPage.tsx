@@ -68,7 +68,7 @@ const SERVER_FIELD_MAP: Partial<Record<string, Path<PublishFormValues>>> = {
 
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <section className="grid gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:grid-cols-3">
+    <section className="grid gap-6 rounded-lg border border-line p-5 sm:p-6 lg:grid-cols-3">
       <div>
         <h2 className="font-semibold text-slate-900">{title}</h2>
         <p className="mt-1 text-sm text-slate-500">{description}</p>
@@ -132,7 +132,7 @@ export default function PublishEquipmentPage() {
       (position) => {
         setValue('latitude', position.coords.latitude.toFixed(7))
         setValue('longitude', position.coords.longitude.toFixed(7))
-        setLocationNote('📍 Usaremos la ubicación exacta del equipo para mostrarlo en el mapa.')
+        setLocationNote('Usaremos la ubicación exacta del equipo para mostrarlo en el mapa.')
       },
       () => setLocationNote('No pudimos obtener tu ubicación; usaremos el centro de la ciudad.'),
       { timeout: 10_000 },
@@ -177,7 +177,7 @@ export default function PublishEquipmentPage() {
       <PageHeader
         title="Publicar maquinaria"
         description="Completa la ficha del equipo. Las empresas del catálogo podrán verlo y solicitar reservas."
-        breadcrumbs={[{ label: 'Dashboard', to: PATHS.home }, { label: 'Publicar maquinaria' }]}
+        breadcrumbs={[{ label: 'Panel', to: PATHS.home }, { label: 'Publicar maquinaria' }]}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
@@ -246,7 +246,7 @@ export default function PublishEquipmentPage() {
             }}
           />
           <Input label="Dirección" placeholder="Av. Industrial 450, Ate" error={errors.address?.message} {...register('address')} />
-          <div className="flex flex-col gap-2 rounded-xl bg-slate-50 p-4 text-sm sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-4 text-sm sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-slate-600">{locationNote ?? 'Por defecto usamos el centro de la ciudad elegida.'}</p>
             <Button variant="secondary" size="sm" onClick={detectLocation} leftIcon={<LocateFixed className="size-4" />}>
               Usar mi ubicación

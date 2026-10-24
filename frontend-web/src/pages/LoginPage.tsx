@@ -1,9 +1,10 @@
-import { HardHat, Lock, Mail } from 'lucide-react'
+import { Lock, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
+import { AuthLayout } from '../components/layout/AuthLayout'
 import type { LoginLocationState } from '../contexts/AuthContextDefinition'
 import { useAuth } from '../hooks/useAuth'
 import { useZodForm } from '../hooks/useZodForm'
@@ -44,23 +45,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <span className="flex size-14 items-center justify-center rounded-xl bg-brand-500">
-            <HardHat className="size-8" aria-hidden="true" />
-          </span>
-          <h1 className="text-2xl font-bold text-slate-900">Bienvenido a RentEquip</h1>
-          <p className="text-sm text-slate-500">Ingresa para gestionar tu maquinaria y reservas.</p>
-        </div>
+    <AuthLayout
+      title="Inicia sesión en RentEquip"
+      description="Alquila maquinaria pesada entre constructoras del Perú, o pon a trabajar la tuya."
+    >
 
         {locationState.sessionExpired && !formError && (
-          <p role="alert" className="mb-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <p role="alert" className="mb-4 rounded-md border border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-sm text-[#92400e]">
             Tu sesión expiró. Vuelve a iniciar sesión.
           </p>
         )}
         {formError && (
-          <p role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p role="alert" className="mb-4 rounded-md bg-[#ffedea] px-4 py-3 text-sm text-[#831c1e]">
             {formError}
           </p>
         )}
@@ -91,13 +87,12 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-6 text-sm text-slate-600">
           ¿Tu empresa aún no está registrada?{' '}
-          <Link to={PATHS.register} className="font-semibold text-brand-700 hover:underline">
+          <Link to={PATHS.register} className="font-medium text-ink underline underline-offset-2">
             Crear cuenta
           </Link>
         </p>
-      </div>
-    </main>
+    </AuthLayout>
   )
 }

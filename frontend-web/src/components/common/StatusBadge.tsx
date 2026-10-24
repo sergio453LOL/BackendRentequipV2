@@ -2,19 +2,20 @@ import type { EquipmentStatus, ReservationStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { EQUIPMENT_STATUS_LABELS, RESERVATION_STATUS_LABELS } from '../../utils/labels'
 
-type Tone = 'green' | 'amber' | 'blue' | 'slate' | 'red'
+type Tone = 'green' | 'amber' | 'ink' | 'slate' | 'red'
 
+// Pale tint with dark ink of the same hue; a confirmed booking is the dark neutral, a finished one the pale.
 const TONE_CLASSES: Record<Tone, string> = {
-  green: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  amber: 'bg-amber-50 text-amber-800 ring-amber-600/20',
-  blue: 'bg-sky-50 text-sky-700 ring-sky-600/20',
-  slate: 'bg-slate-100 text-slate-600 ring-slate-500/20',
-  red: 'bg-red-50 text-red-700 ring-red-600/20',
+  green: 'bg-[#dcfae5] text-[#04250e]',
+  amber: 'bg-[#fffbeb] text-[#92400e] ring-1 ring-inset ring-[#fde68a]',
+  ink: 'bg-slate-800 text-white',
+  slate: 'bg-active text-slate-700',
+  red: 'bg-[#ffedea] text-[#831c1e]',
 }
 
 const RESERVATION_TONES: Record<ReservationStatus, Tone> = {
   PENDING: 'amber',
-  CONFIRMED: 'blue',
+  CONFIRMED: 'ink',
   IN_PROGRESS: 'green',
   COMPLETED: 'slate',
   CANCELLED: 'red',
@@ -23,7 +24,7 @@ const RESERVATION_TONES: Record<ReservationStatus, Tone> = {
 
 const EQUIPMENT_TONES: Record<EquipmentStatus, Tone> = {
   AVAILABLE: 'green',
-  RENTED: 'blue',
+  RENTED: 'ink',
   MAINTENANCE: 'amber',
   INACTIVE: 'slate',
 }
@@ -39,7 +40,7 @@ export function StatusBadge(props: StatusBadgeProps) {
       : [EQUIPMENT_TONES[props.status], EQUIPMENT_STATUS_LABELS[props.status]]
 
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', TONE_CLASSES[tone])}>
+    <span className={cn('inline-flex h-5 flex-none items-center rounded-full px-2 text-xs font-medium whitespace-nowrap', TONE_CLASSES[tone])}>
       {label}
     </span>
   )

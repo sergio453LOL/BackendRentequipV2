@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn'
 const VARIANT_STYLES: Record<ToastVariant, { icon: LucideIcon; classes: string }> = {
   success: { icon: CheckCircle2, classes: 'border-emerald-200 [&_svg.toast-icon]:text-emerald-500' },
   error: { icon: XCircle, classes: 'border-red-200 [&_svg.toast-icon]:text-red-500' },
-  info: { icon: Info, classes: 'border-sky-200 [&_svg.toast-icon]:text-sky-500' },
+  info: { icon: Info, classes: 'border-slate-200 [&_svg.toast-icon]:text-slate-500' },
 }
 
 interface ToastViewportProps {
@@ -26,7 +26,7 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
             key={toast.id}
             role={toast.variant === 'error' ? 'alert' : 'status'}
             className={cn(
-              'pointer-events-auto flex w-full max-w-sm animate-[slide-in_200ms_ease-out] items-start gap-3 rounded-xl border bg-white p-4 shadow-lg',
+              'pointer-events-auto flex w-full max-w-sm animate-[slide-in_200ms_ease-out] items-start gap-3 rounded-lg border bg-white p-4 shadow-lg',
               classes,
             )}
           >

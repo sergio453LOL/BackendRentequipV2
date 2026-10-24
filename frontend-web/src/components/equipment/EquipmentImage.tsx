@@ -18,7 +18,7 @@ export function EquipmentImage({ src, alt, className }: EquipmentImageProps) {
       <div
         role="img"
         aria-label={`${alt} (sin foto)`}
-        className={cn('flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400', className)}
+        className={cn('flex items-center justify-center bg-raised text-slate-400', className)}
       >
         <Truck className="size-1/4 max-h-16 max-w-16" aria-hidden="true" />
       </div>

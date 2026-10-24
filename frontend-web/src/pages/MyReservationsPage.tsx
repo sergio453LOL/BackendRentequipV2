@@ -1,5 +1,5 @@
 import { CalendarX2, Check, CreditCard, FileDown, FilterX, Flag, Play, Search, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
@@ -7,7 +7,6 @@ import { EmptyState } from '../components/common/EmptyState'
 import { ErrorState } from '../components/common/ErrorState'
 import { PageHeader } from '../components/common/PageHeader'
 import { Pagination } from '../components/common/Pagination'
-import { Select } from '../components/common/Select'
 import { SkeletonLoader } from '../components/common/SkeletonLoader'
 import { PaymentModal } from '../components/payments/PaymentModal'
 import { ReservationCard } from '../components/reservations/ReservationCard'
@@ -18,12 +17,14 @@ import { useToast } from '../hooks/useToast'
 import { usePagination } from '../hooks/usePagination'
 import { useQueryParam } from '../hooks/useQueryParam'
 import { PATHS } from '../routes/paths'
+import { api } from '../services/api'
 import { ENDPOINTS } from '../services/endpoints'
 import { paymentService } from '../services/paymentService'
 import { reservationService } from '../services/reservationService'
 import type { PageResponse, Reservation, ReservationRole, ReservationStatus } from '../types'
 import { cn } from '../utils/cn'
 import { downloadReceipt } from '../utils/downloadReceipt'
+import { formatNumber } from '../utils/format'
 import { RESERVATION_ROLE_LABELS, RESERVATION_STATUS_LABELS, RESERVATION_STATUSES } from '../utils/labels'
 
 type ReservationAction = 'confirm' | 'reject' | 'cancel' | 'start' | 'complete'
@@ -109,6 +110,42 @@ function runAction(action: ReservationAction, reservation: Reservation, reason: 
   }
 }
 
+const ALL = 'ALL'
+
+/** Reservations per status for the current side (renter or owner): the totals behind the filter cards. */
+function useStatusCounts(role: ReservationRole, reloadKey: number): Record<string, number> | null {
+  const key = `${role}|${reloadKey}`
+  const [result, setResult] = useState<{ key: string; counts: Record<string, number> } | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    Promise.all(
+      [ALL, ...RESERVATION_STATUSES].map(async (status) => {
+        const { data } = await api.get<PageResponse<Reservation>>(ENDPOINTS.reservations, {
+          params: { role, status: status === ALL ? undefined : status, page: 0, size: 1 },
+          signal: controller.signal,
+        })
+        return [status, data.totalElements] as const
+      }),
+    )
+      .then((entries) => setResult({ key, counts: Object.fromEntries(entries) }))
+      .catch(() => undefined)
+    return () => controller.abort()
+  }, [key, role])
+
+  return result?.key === key ? result.counts : null
+}
+
+const STATUS_CARD_LABELS: Record<ReservationStatus | typeof ALL, string> = {
+  ALL: 'Todas',
+  PENDING: 'Pendientes',
+  CONFIRMED: 'Confirmadas',
+  IN_PROGRESS: 'En curso',
+  COMPLETED: 'Completadas',
+  CANCELLED: 'Canceladas',
+  REJECTED: 'Rechazadas',
+}
+
 function isReservationRole(value: string): value is ReservationRole {
   return value === 'RENTER' || value === 'OWNER'
 }
@@ -123,15 +160,21 @@ export default function MyReservationsPage() {
   const [statusParam, setStatusParam] = useQueryParam('status')
   const role: ReservationRole = isReservationRole(roleParam) ? roleParam : 'RENTER'
   const status = isReservationStatus(statusParam) ? statusParam : undefined
-  const { page, size, setPage, setSize } = usePagination(10)
+  const { page, size, setPage, setSize } = usePagination()
   const canManage = user?.role !== 'OPERATOR'
 
-  const { data, error, isLoading, refetch } = useFetch<PageResponse<Reservation>>(ENDPOINTS.reservations, {
+  const { data, error, isLoading, refetch: refetchList } = useFetch<PageResponse<Reservation>>(ENDPOINTS.reservations, {
     role,
     status,
     page,
     size,
   })
+  const [countsVersion, setCountsVersion] = useState(0)
+  const counts = useStatusCounts(role, countsVersion)
+  const refetch = () => {
+    refetchList()
+    setCountsVersion((version) => version + 1)
+  }
 
   const toast = useToast()
   const [pending, setPending] = useState<{ action: ReservationAction; reservation: Reservation } | null>(null)
@@ -160,15 +203,19 @@ export default function MyReservationsPage() {
   })
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-[1200px] space-y-5">
       <PageHeader
-        title="Mis reservas"
-        description="Sigue tus solicitudes y gestiona las reservas de tus equipos."
-        breadcrumbs={[{ label: 'Mis reservas' }]}
+        title="Reservas"
+        description={
+          role === 'RENTER'
+            ? 'Lo que tu empresa alquila a otras: pagos, comprobantes y estado de cada solicitud.'
+            : 'Lo que otras empresas reservan de tu flota: confirma, entrega y cierra cada alquiler.'
+        }
+        breadcrumbs={[{ label: 'Reservas' }]}
       />
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div role="tablist" aria-label="Tipo de reserva" className="inline-flex rounded-xl bg-slate-100 p-1">
+      <div className="border-b border-line">
+        <div role="tablist" aria-label="Tipo de reserva" className="-mb-px flex gap-6">
           {(['RENTER', 'OWNER'] as const).map((tab) => (
             <button
               key={tab}
@@ -177,22 +224,38 @@ export default function MyReservationsPage() {
               aria-selected={role === tab}
               onClick={() => setRoleParam(tab)}
               className={cn(
-                'rounded-lg px-4 py-2 text-sm font-medium transition',
-                role === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900',
+                'h-10 border-b-2 text-sm transition-colors',
+                role === tab ? 'border-accent font-semibold text-ink' : 'border-transparent text-slate-600 hover:text-ink',
               )}
             >
               {RESERVATION_ROLE_LABELS[tab]}
             </button>
           ))}
         </div>
-        <Select
-          className="md:w-56"
-          label="Estado"
-          placeholder="Todos los estados"
-          value={status ?? ''}
-          onChange={(event) => setStatusParam(event.target.value)}
-          options={RESERVATION_STATUSES.map((value) => ({ value, label: RESERVATION_STATUS_LABELS[value] }))}
-        />
+      </div>
+
+      <div role="group" aria-label="Filtrar por estado" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+        {([ALL, ...RESERVATION_STATUSES] as const).map((value) => {
+          const isSelected = (status ?? ALL) === value
+          const count = counts?.[value]
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => setStatusParam(value === ALL ? '' : value)}
+              className={cn(
+                'flex h-[61px] min-w-[120px] shrink-0 flex-col justify-center rounded-lg border px-3 text-left transition-colors sm:flex-1',
+                isSelected ? 'border-[1.5px] border-accent bg-accent-tint/50' : 'border-line bg-sheet hover:border-slate-300',
+              )}
+            >
+              <span className="truncate text-[13px] text-slate-600">{STATUS_CARD_LABELS[value]}</span>
+              <span className={cn('num text-base font-semibold', count === 0 ? 'text-slate-500' : 'text-ink')}>
+                {count === undefined ? '–' : formatNumber(count)}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {error && <ErrorState error={error} onRetry={refetch} />}
@@ -218,7 +281,7 @@ export default function MyReservationsPage() {
               role === 'RENTER' && (
                 <Link
                   to={PATHS.catalog}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-brand-400"
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-white hover:bg-ink-hover"
                 >
                   <Search className="size-4" aria-hidden="true" /> Explorar catálogo
                 </Link>
@@ -230,7 +293,7 @@ export default function MyReservationsPage() {
 
       {!error && data && data.totalElements > 0 && (
         <>
-          <ul aria-busy={isLoading} className={cn('space-y-3 transition-opacity', isLoading && 'opacity-60')}>
+          <ul aria-busy={isLoading} className={cn('divide-y divide-rule rounded-lg border border-line transition-opacity', isLoading && 'opacity-60')}>
             {data.content.map((reservation) => (
               <li key={reservation.id}>
                 <ReservationCard
@@ -240,7 +303,7 @@ export default function MyReservationsPage() {
                     role === 'RENTER' &&
                       reservation.paymentStatus === 'UNPAID' &&
                       (reservation.status === 'PENDING' || reservation.status === 'CONFIRMED') && (
-                        <Button key="pay" size="sm" onClick={() => setPayingReservation(reservation)} leftIcon={<CreditCard className="size-4" />}>
+                        <Button key="pay" size="sm" variant="secondary" onClick={() => setPayingReservation(reservation)} leftIcon={<CreditCard className="size-4" />}>
                           Pagar
                         </Button>
                       ),
@@ -248,7 +311,7 @@ export default function MyReservationsPage() {
                       <Button
                         key="receipt"
                         size="sm"
-                        variant="secondary"
+                        variant="ghost"
                         isLoading={downloadingId === reservation.id}
                         onClick={() => void handleDownloadReceipt(reservation)}
                         leftIcon={<FileDown className="size-4" />}
@@ -262,7 +325,7 @@ export default function MyReservationsPage() {
                       <Button
                         key={action}
                         size="sm"
-                        variant={action === 'confirm' ? 'primary' : action === 'reject' || action === 'cancel' ? 'secondary' : 'primary'}
+                        variant={action === 'reject' || action === 'cancel' ? 'ghost' : 'secondary'}
                         disabled={performAction.isLoading}
                         onClick={() => setPending({ action, reservation })}
                         leftIcon={<Icon className="size-4" />}

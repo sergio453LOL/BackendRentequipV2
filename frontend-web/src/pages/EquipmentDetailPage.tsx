@@ -30,7 +30,7 @@ function NotFoundEquipment() {
       action={
         <Link
           to={PATHS.catalog}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-brand-400"
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3.5 text-sm font-medium text-white hover:bg-ink-hover"
         >
           <ArrowLeft className="size-4" aria-hidden="true" /> Volver al catálogo
         </Link>
@@ -41,12 +41,12 @@ function NotFoundEquipment() {
 
 function DetailSkeleton() {
   return (
-    <div className="grid animate-pulse gap-8 lg:grid-cols-5">
-      <div className="aspect-[4/3] rounded-2xl bg-slate-200 lg:col-span-3" />
+    <div className="grid gap-6 lg:grid-cols-5">
+      <div className="aspect-[4/3] rounded-lg bg-raised lg:col-span-3" />
       <div className="space-y-4 lg:col-span-2">
-        <div className="h-8 w-3/4 rounded bg-slate-200" />
-        <div className="h-4 w-1/2 rounded bg-slate-200" />
-        <div className="h-48 rounded-2xl bg-slate-200" />
+        <div className="h-7 w-3/4 rounded bg-raised" />
+        <div className="h-4 w-1/2 rounded bg-raised" />
+        <div className="h-48 rounded-lg bg-raised" />
       </div>
     </div>
   )
@@ -76,31 +76,31 @@ export default function EquipmentDetailPage() {
   const averageRating = rating.data?.averageRating ?? 0
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader
         title={equipment.name}
         description={`${equipment.brand} · ${equipment.model}${equipment.manufactureYear ? ` · ${equipment.manufactureYear}` : ''}`}
         breadcrumbs={[{ label: 'Catálogo', to: PATHS.catalog }, { label: equipment.name }]}
       />
 
-      <div className="grid gap-8 lg:grid-cols-5">
-        <div className="space-y-8 lg:col-span-3">
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="min-w-0 space-y-8 lg:col-span-3">
           <ImageGallery images={equipment.imageUrls} alt={equipment.name} />
 
           {equipment.description && (
             <section aria-labelledby="description-title" className="space-y-2">
-              <h2 id="description-title" className="text-lg font-semibold text-slate-900">
+              <h2 id="description-title" className="text-base font-semibold text-ink">
                 Descripción
               </h2>
-              <p className="whitespace-pre-line text-slate-600">{equipment.description}</p>
+              <p className="max-w-[68ch] text-[15px] leading-6 whitespace-pre-line text-ink">{equipment.description}</p>
             </section>
           )}
 
           <section aria-labelledby="specs-title" className="space-y-3">
-            <h2 id="specs-title" className="text-lg font-semibold text-slate-900">
+            <h2 id="specs-title" className="text-base font-semibold text-ink">
               Especificaciones técnicas
             </h2>
-            <dl className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-white p-4 text-sm sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg bg-raised p-5 text-sm sm:grid-cols-3">
               <SpecItem label="Marca" value={equipment.brand} />
               <SpecItem label="Modelo" value={equipment.model} />
               <SpecItem label="Año" value={equipment.manufactureYear?.toString() ?? '—'} />
@@ -117,38 +117,38 @@ export default function EquipmentDetailPage() {
         </div>
 
         <aside className="lg:col-span-2">
-          <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+          <div className="space-y-5 rounded-lg border border-line bg-sheet p-5 lg:sticky lg:top-4">
             <div className="flex items-center justify-between gap-3">
               <StatusBadge kind="equipment" status={equipment.status} />
               {averageRating > 0 && (
                 <span className="flex items-center gap-1 text-sm font-medium text-slate-700" aria-label={`Calificación ${averageRating.toFixed(1)} de 5`}>
-                  <Star className="size-4 fill-brand-400 text-brand-400" aria-hidden="true" />
+                  <Star className="size-4 fill-accent text-accent" aria-hidden="true" />
                   {averageRating.toFixed(1)}
                 </span>
               )}
             </div>
 
             <div>
-              <p className="text-3xl font-bold text-slate-900">
+              <p className="num text-[28px] leading-9 font-semibold text-ink">
                 {formatCurrency(equipment.dailyRate, equipment.currency)}
-                <span className="text-base font-normal text-slate-500"> / día</span>
+                <span className="text-sm font-normal text-slate-500"> / día</span>
               </p>
               {equipment.weeklyRate !== null && (
-                <p className="text-sm text-slate-500">{formatCurrency(equipment.weeklyRate, equipment.currency)} por semana</p>
+                <p className="num text-sm text-slate-600">{formatCurrency(equipment.weeklyRate, equipment.currency)} por semana</p>
               )}
             </div>
 
-            <ul className="space-y-2 text-sm text-slate-600">
+            <ul className="space-y-2 border-t border-rule pt-4 text-sm text-ink">
               <li className="flex items-center gap-2">
-                <ShieldCheck className="size-4 text-emerald-600" aria-hidden="true" />
+                <ShieldCheck className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
                 Garantía reembolsable de {formatCurrency(equipment.securityDeposit, equipment.currency)}
               </li>
               <li className="flex items-center gap-2">
-                <MapPin className="size-4 text-slate-400" aria-hidden="true" />
+                <MapPin className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
                 {[equipment.address, equipment.city].filter(Boolean).join(', ')}
               </li>
               <li className="flex items-center gap-2">
-                <Building2 className="size-4 text-slate-400" aria-hidden="true" />
+                <Building2 className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
                 {equipment.ownerCompanyName}
               </li>
             </ul>
@@ -156,7 +156,7 @@ export default function EquipmentDetailPage() {
             {equipment.categories.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="Categorías">
                 {equipment.categories.map((category) => (
-                  <li key={category} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  <li key={category} className="rounded-full bg-active px-2.5 py-0.5 text-xs font-medium text-slate-700">
                     {category}
                   </li>
                 ))}
@@ -168,12 +168,12 @@ export default function EquipmentDetailPage() {
               fullWidth
               disabled={reserveBlockedReason !== null}
               onClick={() => setIsReserving(true)}
-              leftIcon={<CalendarPlus className="size-5" />}
+              leftIcon={<CalendarPlus className="size-4" />}
               title={reserveBlockedReason ?? undefined}
             >
               Solicitar reserva
             </Button>
-            {reserveBlockedReason && <p className="text-center text-xs text-slate-500">{reserveBlockedReason}</p>}
+            {reserveBlockedReason && <p className="text-center text-[13px] text-slate-600">{reserveBlockedReason}</p>}
           </div>
         </aside>
       </div>
@@ -186,8 +186,8 @@ export default function EquipmentDetailPage() {
 function SpecItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="font-medium break-words text-slate-900">{value}</dd>
+      <dt className="text-xs text-slate-600">{label}</dt>
+      <dd className="font-medium break-words text-ink">{value}</dd>
     </div>
   )
 }

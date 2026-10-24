@@ -36,7 +36,7 @@ export function Input({ label, error, hint, leftIcon, id, className, required, .
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={error || hint ? messageId : undefined}
-          className={cn(fieldClasses(Boolean(error)), 'h-10', leftIcon != null && 'pl-10')}
+          className={cn(fieldClasses(Boolean(error)), 'h-9', leftIcon != null && 'pl-9')}
           {...rest}
         />
       </div>

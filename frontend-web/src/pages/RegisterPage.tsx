@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Building2, Check, HardHat, LocateFixed, UserRound, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Building2, Check, LocateFixed, UserRound, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import type { Path } from 'react-hook-form'
 import { Link } from 'react-router-dom'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
 import { Select } from '../components/common/Select'
+import { AuthLayout } from '../components/layout/AuthLayout'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
 import { useZodForm } from '../hooks/useZodForm'
@@ -175,15 +176,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 p-4 py-10">
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-500">
-            <HardHat className="size-7" aria-hidden="true" />
-          </span>
-          <h1 className="text-2xl font-bold text-slate-900">Registra tu empresa</h1>
-          <p className="text-sm text-slate-500">Publica tu maquinaria y alquila equipos de otras constructoras.</p>
-        </div>
+    <AuthLayout
+      width="wide"
+      title="Registra tu empresa"
+      description="Publica tu maquinaria y alquila equipos de otras constructoras."
+    >
 
         <ol className="mb-8 flex items-center gap-3" aria-label="Progreso del registro">
           {STEPS.map(({ title, icon: Icon }, index) => {
@@ -194,9 +191,9 @@ export default function RegisterPage() {
                 <span
                   className={cn(
                     'flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
-                    isDone && 'bg-emerald-500 text-white',
-                    isCurrent && 'bg-brand-500 text-slate-900',
-                    !isDone && !isCurrent && 'bg-slate-100 text-slate-400',
+                    isDone && 'bg-slate-700 text-white',
+                    isCurrent && 'bg-ink text-white',
+                    !isDone && !isCurrent && 'bg-active text-slate-600',
                   )}
                 >
                   {isDone ? <Check className="size-4" /> : <Icon className="size-4" />}
@@ -249,10 +246,10 @@ export default function RegisterPage() {
               }}
             />
             <Input label="Dirección" placeholder="Av. Javier Prado 123" error={errors.address?.message} {...register('address')} />
-            <div className="flex flex-col gap-2 rounded-xl bg-slate-50 p-4 text-sm sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-4 text-sm sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-slate-600">
                 {locationStatus === 'detected'
-                  ? '📍 Usaremos tu ubicación actual para mostrar tus equipos en el mapa.'
+                  ? 'Usaremos tu ubicación actual para mostrar tus equipos en el mapa.'
                   : locationStatus === 'denied'
                     ? 'No pudimos obtener tu ubicación. Usaremos el centro de la ciudad elegida.'
                     : locationStatus === 'unsupported'
@@ -283,7 +280,7 @@ export default function RegisterPage() {
               {PASSWORD_RULES.map((rule) => {
                 const passes = rule.test(password)
                 return (
-                  <li key={rule.label} className={cn('flex items-center gap-1.5', passes ? 'text-emerald-600' : 'text-slate-400')}>
+                  <li key={rule.label} className={cn('flex items-center gap-1.5', passes ? 'text-positive' : 'text-slate-500')}>
                     <Check className="size-3.5" aria-hidden="true" />
                     {rule.label}
                     <span className="sr-only">{passes ? '(cumple)' : '(pendiente)'}</span>
@@ -314,7 +311,6 @@ export default function RegisterPage() {
             )}
           </div>
         </form>
-      </div>
-    </main>
+    </AuthLayout>
   )
 }

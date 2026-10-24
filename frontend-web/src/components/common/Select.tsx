@@ -38,7 +38,7 @@ export function Select({ label, options, placeholder, error, hint, id, className
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={error || hint ? messageId : undefined}
-          className={cn(fieldClasses(Boolean(error)), 'h-10 appearance-none pr-9')}
+          className={cn(fieldClasses(Boolean(error)), 'h-9 appearance-none pr-9')}
           {...rest}
         >
           {placeholder !== undefined && <option value="">{placeholder}</option>}

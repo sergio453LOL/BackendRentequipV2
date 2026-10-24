@@ -1,108 +1,174 @@
 import { FilterX, SearchX } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
 import { ErrorState } from '../components/common/ErrorState'
 import { PageHeader } from '../components/common/PageHeader'
 import { Pagination } from '../components/common/Pagination'
-import { SearchBar } from '../components/common/SearchBar'
 import { Select } from '../components/common/Select'
 import { SkeletonLoader } from '../components/common/SkeletonLoader'
+import { CatalogSearch } from '../components/common/TopBar'
 import { EquipmentCard } from '../components/equipment/EquipmentCard'
 import { useAuth } from '../hooks/useAuth'
-import { useDebounce } from '../hooks/useDebounce'
 import { useFetch } from '../hooks/useFetch'
 import { usePagination } from '../hooks/usePagination'
 import { useQueryParam } from '../hooks/useQueryParam'
+import { api } from '../services/api'
 import { ENDPOINTS } from '../services/endpoints'
 import type { EquipmentCategory, EquipmentSummary, PageResponse } from '../types'
 import { PERU_CITIES } from '../utils/cities'
 import { cn } from '../utils/cn'
+import { formatNumber } from '../utils/format'
 
-const SEARCH_DEBOUNCE_MS = 400
+const ALL = 'all'
+
+interface CountFilters {
+  q?: string
+  city?: string
+  excludeOwnerId?: number
+}
+
+/**
+ * How many machines each category holds under the current search and city, so the type filter shows
+ * what a click will return. One request per category, asking only for the total.
+ */
+function useCategoryCounts(categories: EquipmentCategory[], filters: CountFilters): Record<string, number> | null {
+  const key = JSON.stringify({ ids: categories.map((category) => category.id), ...filters })
+  const [result, setResult] = useState<{ key: string; counts: Record<string, number> } | null>(null)
+
+  useEffect(() => {
+    if (categories.length === 0) return
+    const controller = new AbortController()
+    const ids: (number | null)[] = [null, ...categories.map((category) => category.id)]
+    Promise.all(
+      ids.map(async (categoryId) => {
+        const { data } = await api.get<PageResponse<EquipmentSummary>>(ENDPOINTS.equipmentSearch, {
+          params: { ...filters, categoryId: categoryId ?? undefined, page: 0, size: 1 },
+          signal: controller.signal,
+        })
+        return [categoryId === null ? ALL : String(categoryId), data.totalElements] as const
+      }),
+    )
+      .then((entries) => setResult({ key, counts: Object.fromEntries(entries) }))
+      .catch(() => undefined)
+    return () => controller.abort()
+    // `key` captures categories and filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
+  return result?.key === key ? result.counts : null
+}
+
+function CategoryCards({
+  categories,
+  counts,
+  selected,
+  onSelect,
+}: {
+  categories: EquipmentCategory[]
+  counts: Record<string, number> | null
+  selected: string
+  onSelect: (value: string) => void
+}) {
+  const items = [{ value: '', id: ALL, name: 'Todas' }, ...categories.map((category) => ({ value: String(category.id), id: String(category.id), name: category.name }))]
+  return (
+    <div role="group" aria-label="Tipo de maquinaria" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      {items.map((item) => {
+        const isSelected = selected === item.value
+        const count = counts?.[item.id]
+        return (
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => onSelect(item.value)}
+            className={cn(
+              'flex h-[61px] min-w-[132px] shrink-0 flex-col justify-center rounded-lg border px-3 text-left transition-colors sm:flex-1',
+              isSelected ? 'border-[1.5px] border-accent bg-accent-tint/50' : 'border-line bg-sheet hover:border-slate-300',
+            )}
+          >
+            <span className="truncate text-[13px] text-slate-600">{item.name}</span>
+            <span className={cn('num text-base font-semibold', count === 0 ? 'text-slate-500' : 'text-ink')}>
+              {count === undefined ? '–' : formatNumber(count)}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function CatalogPage() {
   const { user } = useAuth()
   const [, setSearchParams] = useSearchParams()
-  const [query, setQuery] = useQueryParam('q')
+  const [query] = useQueryParam('q')
   const [categoryId, setCategoryId] = useQueryParam('categoryId')
   const [city, setCity] = useQueryParam('city')
-  const { page, size, setPage, setSize } = usePagination(10)
-
-  const [searchText, setSearchText] = useState(query)
-  const debouncedSearch = useDebounce(searchText.trim(), SEARCH_DEBOUNCE_MS)
-
-  const lastDebouncedSearch = useRef(debouncedSearch)
-  useEffect(() => {
-    if (debouncedSearch === lastDebouncedSearch.current) return
-    lastDebouncedSearch.current = debouncedSearch
-    setQuery(debouncedSearch)
-  }, [debouncedSearch, setQuery])
+  const { page, size, setPage, setSize } = usePagination()
 
   const categories = useFetch<EquipmentCategory[]>(ENDPOINTS.categories)
+  const filters: CountFilters = { q: query || undefined, city: city || undefined, excludeOwnerId: user?.companyId }
+  const counts = useCategoryCounts(categories.data ?? [], filters)
   const results = useFetch<PageResponse<EquipmentSummary>>(ENDPOINTS.equipmentSearch, {
-    q: query || undefined,
+    ...filters,
     categoryId: categoryId || undefined,
-    city: city || undefined,
-    excludeOwnerId: user?.companyId,
     page,
     size,
   })
 
   const hasFilters = Boolean(query || categoryId || city)
-  const isTyping = searchText.trim() !== query
+  const total = results.data?.totalElements
 
   function clearFilters() {
-    setSearchText('')
     setSearchParams({}, { replace: true })
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-[1200px] space-y-5">
       <PageHeader
         title="Catálogo de maquinaria"
-        description="Encuentra equipos disponibles de otras empresas y solicita tu reserva."
+        description={
+          query
+            ? `Resultados para “${query}” en equipos de otras empresas.`
+            : 'Equipos de otras empresas, listos para reservar por días.'
+        }
         breadcrumbs={[{ label: 'Catálogo' }]}
       />
 
-      <section aria-label="Filtros" className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_14rem_12rem_auto] md:items-end">
-        <SearchBar
-          value={searchText}
-          onChange={setSearchText}
-          label="Buscar maquinaria"
-          placeholder="Busca por nombre, marca o modelo…"
-          isSearching={isTyping}
-        />
-        <Select
-          label="Categoría"
-          placeholder="Todas las categorías"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-          options={(categories.data ?? []).map((category) => ({ value: String(category.id), label: category.name }))}
-          hint={categories.error ? 'No pudimos cargar las categorías' : undefined}
-        />
-        <Select
-          label="Ciudad"
-          placeholder="Todas las ciudades"
-          value={city}
-          onChange={(event) => setCity(event.target.value)}
-          options={PERU_CITIES.map((item) => ({ value: item.name, label: item.name }))}
-        />
-        <Button
-          variant="ghost"
-          onClick={clearFilters}
-          disabled={!hasFilters && !searchText}
-          leftIcon={<FilterX className="size-4" />}
-          className="md:mb-0"
-        >
-          Limpiar
-        </Button>
-      </section>
+      <CatalogSearch id="catalog-page-search" className="sm:hidden" />
+
+      {categories.error ? (
+        <p className="text-sm text-slate-600">No pudimos cargar las categorías; puedes buscar por nombre o ciudad.</p>
+      ) : (
+        <CategoryCards categories={categories.data ?? []} counts={counts} selected={categoryId} onSelect={setCategoryId} />
+      )}
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <p className="num text-sm text-slate-600" aria-live="polite">
+          {total === undefined ? 'Buscando…' : total === 1 ? '1 máquina' : `${formatNumber(total)} máquinas`}
+          {city && ` en ${city}`}
+        </p>
+        <div className="flex items-end gap-2">
+          <Select
+            label="Ciudad"
+            placeholder="Todas las ciudades"
+            value={city}
+            onChange={(event) => setCity(event.target.value)}
+            options={PERU_CITIES.map((item) => ({ value: item.name, label: item.name }))}
+            className="w-48"
+          />
+          {hasFilters && (
+            <Button variant="ghost" onClick={clearFilters} leftIcon={<FilterX className="size-4" />}>
+              Limpiar
+            </Button>
+          )}
+        </div>
+      </div>
 
       {results.error && <ErrorState error={results.error} onRetry={results.refetch} />}
 
-      {!results.error && !results.data && <SkeletonLoader variant="card" count={6} />}
+      {!results.error && !results.data && <SkeletonLoader variant="card" count={8} />}
 
       {!results.error && results.data && results.data.totalElements === 0 && (
         <EmptyState
@@ -128,7 +194,7 @@ export default function CatalogPage() {
           <ul
             aria-busy={results.isLoading}
             className={cn(
-              'grid gap-5 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+              'grid gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
               results.isLoading && 'opacity-60',
             )}
           >

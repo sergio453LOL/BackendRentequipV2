@@ -28,7 +28,7 @@ export function Spinner({ size = 'md', label = 'Cargando…', className }: Spinn
 
 export function FullPageSpinner() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center text-brand-500">
+    <div className="flex min-h-[60vh] items-center justify-center text-slate-500">
       <Spinner size="lg" />
     </div>
   )

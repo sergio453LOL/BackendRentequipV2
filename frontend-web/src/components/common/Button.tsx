@@ -14,17 +14,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-500 text-slate-900 hover:bg-brand-400 focus-visible:outline-brand-600',
+  primary: 'bg-ink text-white hover:bg-ink-hover focus-visible:outline-ink',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-slate-400',
-  danger: 'bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-slate-400',
+    'border border-slate-300 bg-white text-ink hover:bg-raised focus-visible:outline-slate-400',
+  danger: 'border border-red-200 bg-white text-negative hover:bg-red-50 focus-visible:outline-red-600',
+  ghost: 'text-slate-600 hover:bg-raised hover:text-ink focus-visible:outline-slate-400',
 }
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-base gap-2',
+  md: 'h-9 px-3.5 text-sm gap-2',
+  lg: 'h-10 px-5 text-sm gap-2',
 }
 
 export function Button({
@@ -45,7 +45,7 @@ export function Button({
       disabled={disabled || isLoading}
       aria-busy={isLoading}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-semibold transition-colors',
+        'inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors active:translate-y-px',
         'focus-visible:outline-2 focus-visible:outline-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-60',
         VARIANT_CLASSES[variant],

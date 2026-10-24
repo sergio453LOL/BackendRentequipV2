@@ -48,7 +48,7 @@ export function Modal({ isOpen, title, onClose, children, footer, size = 'md', i
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         aria-hidden="true"
-        className="absolute inset-0 animate-[fade-in_150ms_ease-out] bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 animate-[fade-in_150ms_ease-out] bg-slate-900/50"
         onClick={isDismissable ? onClose : undefined}
       />
       <div
@@ -58,7 +58,7 @@ export function Modal({ isOpen, title, onClose, children, footer, size = 'md', i
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-2xl outline-none sm:rounded-2xl',
+          'relative flex max-h-[92vh] w-full flex-col rounded-t-lg bg-white shadow-[0_16px_40px_rgba(0,0,0,0.16)] outline-none sm:rounded-lg',
           'animate-[slide-up_200ms_ease-out]',
           SIZE_CLASSES[size],
         )}

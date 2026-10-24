@@ -13,7 +13,7 @@ export function ErrorState({ error, onRetry, title = 'No pudimos cargar la infor
   const Icon = error.isNetworkError ? WifiOff : AlertTriangle
 
   return (
-    <div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-6 py-10 text-center">
+    <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-6 py-10 text-center">
       <Icon className="size-8 text-red-500" aria-hidden="true" />
       <div className="space-y-1">
         <h3 className="font-semibold text-red-800">{title}</h3>

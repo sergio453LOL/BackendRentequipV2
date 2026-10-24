@@ -19,7 +19,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
 
   return (
     <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="relative overflow-hidden rounded-lg bg-raised">
         <EquipmentImage src={current} alt={`${alt}, foto ${selectedIndex + 1}`} className="aspect-[4/3] w-full" />
         {hasMany && (
           <>
@@ -43,7 +43,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
                 aria-pressed={index === selectedIndex}
                 className={cn(
                   'w-full overflow-hidden rounded-lg ring-2 transition',
-                  index === selectedIndex ? 'ring-brand-500' : 'ring-transparent opacity-70 hover:opacity-100',
+                  index === selectedIndex ? 'ring-slate-300' : 'ring-transparent opacity-70 hover:opacity-100',
                 )}
               >
                 <EquipmentImage src={image} alt="" className="aspect-square w-full" />

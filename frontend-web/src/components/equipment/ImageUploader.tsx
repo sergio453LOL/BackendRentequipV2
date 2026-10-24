@@ -122,12 +122,12 @@ export function ImageUploader({ onChange, onBusyChange, error }: ImageUploaderPr
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          'flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors',
-          isDragging ? 'border-brand-500 bg-brand-50' : 'border-slate-300 bg-white hover:border-brand-400 hover:bg-slate-50',
+          'flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors',
+          isDragging ? 'border-ink bg-raised' : 'border-slate-300 bg-white hover:border-ink hover:bg-slate-50',
           items.length >= MAX_IMAGES && 'pointer-events-none opacity-50',
         )}
       >
-        <ImagePlus className="size-8 text-brand-600" aria-hidden="true" />
+        <ImagePlus className="size-8 text-accent-ink" aria-hidden="true" />
         <span className="text-sm font-medium text-slate-700">Arrastra tus fotos aquí o haz clic para elegirlas</span>
         <span className="text-xs text-slate-500">JPG, PNG o WEBP · máximo 5 MB cada una · hasta {MAX_IMAGES} fotos</span>
         <input
@@ -153,11 +153,11 @@ export function ImageUploader({ onChange, onBusyChange, error }: ImageUploaderPr
       {items.length > 0 && (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="Fotos seleccionadas">
           {items.map((item, index) => (
-            <li key={item.id} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+            <li key={item.id} className="group relative overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
               <img src={item.previewUrl} alt={`Foto ${index + 1}`} className="aspect-square w-full object-cover" />
 
               {index === 0 && item.state === 'done' && (
-                <span className="absolute top-2 left-2 rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-bold text-slate-900">
+                <span className="absolute top-2 left-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-semibold text-white">
                   PORTADA
                 </span>
               )}

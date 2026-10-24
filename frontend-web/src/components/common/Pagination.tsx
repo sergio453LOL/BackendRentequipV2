@@ -51,7 +51,7 @@ export function Pagination({ pageData, onPageChange, onSizeChange, isDisabled = 
             value={size}
             disabled={isDisabled}
             onChange={(event) => onSizeChange(Number(event.target.value))}
-            className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:outline-none"
+            className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-ink focus:ring-2 focus:ring-slate-200 focus:outline-none"
           >
             {PAGE_SIZE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -122,7 +122,7 @@ function PageButton({ label, onClick, disabled, isCurrent = false, children }: P
       className={cn(
         'flex size-9 items-center justify-center rounded-lg text-sm font-medium transition-colors',
         isCurrent
-          ? 'bg-brand-500 text-slate-900'
+          ? 'bg-ink text-white'
           : 'text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >

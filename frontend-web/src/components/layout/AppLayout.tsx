@@ -5,39 +5,49 @@ import { PATHS } from '../../routes/paths'
 import { PUBLISHER_ROLES } from '../../routes/roles'
 import { AIChatWidget } from '../common/AIChatWidget'
 import { ErrorBoundary } from '../common/ErrorBoundary'
-import { Navbar } from '../common/Navbar'
 import { OfflineBanner } from '../common/OfflineBanner'
 import { Sidebar, type SidebarItem } from '../common/Sidebar'
 import { FullPageSpinner } from '../common/Spinner'
+import { TopBar } from '../common/TopBar'
 
 const NAVIGATION: SidebarItem[] = [
-  { label: 'Dashboard', to: PATHS.home, icon: LayoutDashboard },
+  { label: 'Panel', to: PATHS.home, icon: LayoutDashboard },
   { label: 'Catálogo', to: PATHS.catalog, icon: Search },
-  { label: 'Mis reservas', to: PATHS.reservations, icon: CalendarRange },
+  { label: 'Reservas', to: PATHS.reservations, icon: CalendarRange },
   { label: 'Publicar maquinaria', to: PATHS.publishEquipment, icon: PlusCircle, allowedRoles: PUBLISHER_ROLES },
 ]
 
+/**
+ * Framed sheet: the sidebar and the 48px top bar share one tinted frame with no rule between them, and
+ * the screen sits on a white sheet inset 8px from the window's right and bottom edges (16px corners,
+ * 1px edge, no shadow). On a phone the frame folds away and the sheet is the screen.
+ */
 export function AppLayout() {
   const { pathname } = useLocation()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const toggleSidebar = useCallback(() => setIsSidebarOpen((open) => !open), [])
-  const closeSidebar = useCallback(() => setIsSidebarOpen(false), [])
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
+  const openMenu = useCallback(() => setIsMenuOpen(true), [])
+  const closeMenu = useCallback(() => setIsMenuOpen(false), [])
+  const toggleAssistant = useCallback(() => setIsAssistantOpen((open) => !open), [])
+  const closeAssistant = useCallback(() => setIsAssistantOpen(false), [])
 
   return (
-    <div className="min-h-screen">
-      <OfflineBanner />
-      <Navbar onToggleSidebar={toggleSidebar} />
-      <div className="flex">
-        <Sidebar items={NAVIGATION} isOpen={isSidebarOpen} onClose={closeSidebar} />
-        <main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pb-24">
-          <ErrorBoundary key={pathname} inline>
-            <Suspense fallback={<FullPageSpinner />}>
-              <Outlet />
-            </Suspense>
-          </ErrorBoundary>
+    <div className="min-h-screen bg-frame lg:flex">
+      <Sidebar items={NAVIGATION} isOpen={isMenuOpen} onClose={closeMenu} />
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <OfflineBanner />
+        <TopBar onOpenMenu={openMenu} onToggleAssistant={toggleAssistant} isAssistantOpen={isAssistantOpen} />
+        <main className="flex-1 bg-sheet lg:mr-2 lg:mb-2 lg:rounded-[16px] lg:border lg:border-line">
+          <div className="px-4 py-5 sm:px-6 lg:p-6">
+            <ErrorBoundary key={pathname} inline>
+              <Suspense fallback={<FullPageSpinner />}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
         </main>
       </div>
-      <AIChatWidget />
+      <AIChatWidget isOpen={isAssistantOpen} onClose={closeAssistant} />
     </div>
   )
 }
