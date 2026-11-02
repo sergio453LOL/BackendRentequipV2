@@ -66,11 +66,11 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
               AND (:categoryId IS NULL
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id = :categoryId))
-              AND (:city IS NULL OR lower(e.city) = lower(:city))
+              AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
               AND (:namePattern IS NULL
-                   OR lower(e.name) LIKE :namePattern
-                   OR lower(e.brand) LIKE :namePattern
-                   OR lower(e.model) LIKE :namePattern)
+                   OR lower(e.name) LIKE cast(:namePattern as string)
+                   OR lower(e.brand) LIKE cast(:namePattern as string)
+                   OR lower(e.model) LIKE cast(:namePattern as string))
               AND (:maxDailyRate IS NULL OR e.dailyRate <= :maxDailyRate)
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """
@@ -90,11 +90,11 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
               AND (:categoryId IS NULL
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id = :categoryId))
-              AND (:city IS NULL OR lower(e.city) = lower(:city))
+              AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
               AND (:namePattern IS NULL
-                   OR lower(e.name) LIKE :namePattern
-                   OR lower(e.brand) LIKE :namePattern
-                   OR lower(e.model) LIKE :namePattern)
+                   OR lower(e.name) LIKE cast(:namePattern as string)
+                   OR lower(e.brand) LIKE cast(:namePattern as string)
+                   OR lower(e.model) LIKE cast(:namePattern as string))
               AND (:maxDailyRate IS NULL OR e.dailyRate <= :maxDailyRate)
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """

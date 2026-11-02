@@ -41,3 +41,7 @@ application-local.properties
 
 # Fotos subidas en desarrollo local
 uploads/
+
+### Frontend (repo propio: FrontendRentequipV2) ###
+frontend-web/
+frontend-mobile/

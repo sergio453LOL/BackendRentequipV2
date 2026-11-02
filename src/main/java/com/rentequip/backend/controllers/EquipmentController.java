@@ -2,6 +2,7 @@ package com.rentequip.backend.controllers;
 
 import com.rentequip.backend.dtos.request.EquipmentCreateRequest;
 import com.rentequip.backend.dtos.request.EquipmentUpdateRequest;
+import com.rentequip.backend.dtos.response.BlockedWindowResponse;
 import com.rentequip.backend.dtos.response.EquipmentResponse;
 import com.rentequip.backend.dtos.response.EquipmentSummaryResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
@@ -40,6 +41,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/equipment")
@@ -114,6 +116,14 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startDate"));
         return ResponseEntity.ok(reservationService.findByEquipment(id, pageable));
+    }
+
+    @GetMapping("/{id}/blocked-dates")
+    public ResponseEntity<List<BlockedWindowResponse>> findBlockedDates(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate until) {
+        return ResponseEntity.ok(reservationService.findBlockedWindows(id, from, until));
     }
 
     @GetMapping("/{id}/reviews")

@@ -192,6 +192,29 @@ class CheckoutUploadAndAssistantTest {
     }
 
     @Test
+    void theCalendarShowsWhenAMachineIsBusyButNotWhoRentedIt() throws Exception {
+        createReservation(10, 14);
+        LocalDate today = LocalDate.now();
+
+        mockMvc.perform(get("/api/v1/equipment/{id}/blocked-dates", equipmentId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                        .param("from", today.toString())
+                        .param("until", today.plusDays(30).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].startDate").value(today.plusDays(10).toString()))
+                .andExpect(jsonPath("$[0].endDate").value(today.plusDays(14).toString()))
+                .andExpect(jsonPath("$[0].status").value("PENDING"))
+                .andExpect(jsonPath("$[0].renterCompanyName").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/equipment/{id}/blocked-dates", equipmentId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                        .param("from", today.toString())
+                        .param("until", today.plusDays(200).toString()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void rejectsFilesThatAreNotImagesWhateverTheirDeclaredType() throws Exception {
         MockMultipartFile fake = new MockMultipartFile("file", "foto.png", "image/png", "<script>".getBytes());
 

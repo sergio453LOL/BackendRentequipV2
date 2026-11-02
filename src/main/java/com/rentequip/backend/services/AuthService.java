@@ -53,7 +53,8 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        return issueTokens(authenticate(request), null);
+        CompanyUserDetails principal = authenticate(request);
+        return issueTokens(principal, companyNameOf(principal));
     }
 
     /**
@@ -71,7 +72,7 @@ public class AuthService {
         if (!principal.isEnabled()) {
             throw new UnauthorizedException("This account has been disabled");
         }
-        return issueTokens(principal, null);
+        return issueTokens(principal, companyNameOf(principal));
     }
 
     private CompanyUserDetails authenticate(LoginRequest request) {
@@ -95,6 +96,11 @@ public class AuthService {
         administrator.setEnabled(true);
         administrator.setCompany(company);
         return administrator;
+    }
+
+    /** The web keeps the company name in the session to greet the user, so login and refresh return it too. */
+    private String companyNameOf(CompanyUserDetails principal) {
+        return companyService.findById(principal.companyId()).name();
     }
 
     private AuthResponse issueTokens(CompanyUserDetails principal, String companyName) {

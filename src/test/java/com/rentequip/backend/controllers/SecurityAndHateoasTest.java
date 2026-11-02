@@ -62,13 +62,22 @@ class SecurityAndHateoasTest {
     void loginWithTheRegisteredCredentialsReturnsAToken() throws Exception {
         register("20600000033", "admin@login.pe", "Constructora Login");
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        String refreshToken = objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"admin@login.pe","password":"%s"}""".formatted(PASSWORD)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(jsonPath("$.role").value("ADMIN"));
+                .andExpect(jsonPath("$.role").value("ADMIN"))
+                .andExpect(jsonPath("$.companyName").value("Constructora Login"))
+                .andReturn().getResponse().getContentAsString()).get("refreshToken").asText();
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}""".formatted(refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.companyName").value("Constructora Login"));
     }
 
     @Test

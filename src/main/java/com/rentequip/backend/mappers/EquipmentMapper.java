@@ -11,6 +11,8 @@ import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.EquipmentCategory;
 import com.rentequip.backend.enums.EquipmentStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -82,7 +84,7 @@ public class EquipmentMapper {
                 equipment.getCity(),
                 equipment.getLatitude(),
                 equipment.getLongitude(),
-                new ArrayList<>(equipment.getImageUrls()),
+                equipment.getImageUrls().stream().map(this::publicUrl).collect(Collectors.toCollection(ArrayList::new)),
                 categoryNames(equipment),
                 equipment.getOwner().getId(),
                 equipment.getOwner().getName(),
@@ -109,7 +111,19 @@ public class EquipmentMapper {
     }
 
     private String primaryImageUrl(Equipment equipment) {
-        return equipment.getImageUrls().isEmpty() ? null : equipment.getImageUrls().get(0);
+        return equipment.getImageUrls().isEmpty() ? null : publicUrl(equipment.getImageUrls().get(0));
+    }
+
+    /**
+     * Demo photos are stored as server paths ("/demo-images/x.jpg") because the seeder runs before any
+     * request and cannot know the public host. They become absolute here, with the host of the current
+     * request, so web and mobile get a URL they can load. Uploaded photos are already absolute.
+     */
+    private String publicUrl(String url) {
+        if (url == null || !url.startsWith("/") || RequestContextHolder.getRequestAttributes() == null) {
+            return url;
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath().path(url).toUriString();
     }
 
     private void applyDetails(Equipment equipment, EquipmentUpdateRequest request) {
