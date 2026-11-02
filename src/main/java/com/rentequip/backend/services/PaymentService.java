@@ -15,6 +15,8 @@ import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.mappers.PaymentMapper;
 import com.rentequip.backend.payments.PaymentGateway;
 import com.rentequip.backend.payments.PaymentGateway.GatewayResult;
+import com.rentequip.backend.payments.PaymentGateway.PaymentSource;
+import com.rentequip.backend.payments.PaymentGateway.PreparedSource;
 import com.rentequip.backend.repositories.PaymentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CurrentUser;
@@ -65,7 +67,14 @@ public class PaymentService {
         }
 
         String description = "Reserva #" + reservation.getId() + " - " + reservation.getEquipment().getName();
-        GatewayResult rental = paymentGateway.charge(request.paymentToken(), reservation.getRentalAmount(),
+        PreparedSource prepared = paymentGateway.prepare(request.paymentToken(),
+                reservation.getRenter().getName() + " - " + description);
+        if (!prepared.isReady()) {
+            throw new PaymentDeclinedException(prepared.declineReason());
+        }
+        PaymentSource source = prepared.source();
+
+        GatewayResult rental = paymentGateway.charge(source, reservation.getRentalAmount(),
                 reservation.getCurrency(), description);
         if (!rental.approved()) {
             throw new PaymentDeclinedException(rental.declineReason());
@@ -73,10 +82,15 @@ public class PaymentService {
 
         GatewayResult deposit = null;
         if (reservation.getSecurityDeposit().signum() > 0) {
-            deposit = paymentGateway.authorize(request.paymentToken(), reservation.getSecurityDeposit(),
-                    reservation.getCurrency(), description + " (garantía)");
+            // Never keep the rental charged when the deposit hold fails: the checkout is all or nothing.
+            try {
+                deposit = paymentGateway.authorize(source, reservation.getSecurityDeposit(),
+                        reservation.getCurrency(), description + " (garantía)");
+            } catch (RuntimeException e) {
+                paymentGateway.refund(rental.reference());
+                throw e;
+            }
             if (!deposit.approved()) {
-                // Never keep the rental charged when the deposit hold fails: the checkout is all or nothing.
                 paymentGateway.refund(rental.reference());
                 throw new PaymentDeclinedException(deposit.declineReason());
             }

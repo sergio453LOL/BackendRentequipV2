@@ -1,7 +1,9 @@
 package com.rentequip.backend.controllers;
 
+import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.services.ImageStorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -18,10 +20,14 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequiredArgsConstructor
 public class UploadController {
+
+    /** Lowercase slug and .jpg only, so the path can never leave the demo-images folder. */
+    private static final Pattern DEMO_IMAGE_NAME = Pattern.compile("^[a-z0-9-]+\\.jpg$");
 
     private final ImageStorageService imageStorageService;
 
@@ -33,6 +39,22 @@ public class UploadController {
         String url = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/uploads/{name}").buildAndExpand(storedName).toUriString();
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
+    }
+
+    /** Photos of the demo catalogue, bundled in the jar (see demo-images/CREDITS.md for their authors). */
+    @GetMapping("/demo-images/{name}")
+    public ResponseEntity<Resource> serveDemoImage(@PathVariable String name) {
+        if (!DEMO_IMAGE_NAME.matcher(name).matches()) {
+            throw new ResourceNotFoundException("Image not found: " + name);
+        }
+        Resource resource = new ClassPathResource("demo-images/" + name);
+        if (!resource.exists()) {
+            throw new ResourceNotFoundException("Image not found: " + name);
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                .body(resource);
     }
 
     @GetMapping("/uploads/{name}")

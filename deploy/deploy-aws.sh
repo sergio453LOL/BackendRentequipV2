@@ -14,6 +14,10 @@
 #   1. Exporta las credenciales del panel "AWS Details > AWS CLI" de Vocareum.
 #   2. export DB_PASSWORD='la-contrasena-de-tu-RDS'
 #   3. (opcional) export CORS_ALLOWED_ORIGINS='http://localhost:*,https://*.vercel.app'
+#   3b. (opcional) export STRIPE_SECRET_KEY='sk_test_...'   # sin ella, pagos simulados
+#   3c. (opcional) export DEMO_DATA_ENABLED=true DEMO_PASSWORD='...'  # catálogo de demostración
+#   3d. (opcional) export TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_WHATSAPP_FROM=+1...  # WhatsApp
+#   3e. (opcional) export WHATSAPP_EMPRESAS_TOKEN=...  # WhatsApp por WhatsApp Empresas (reemplaza a Twilio)
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -119,6 +123,15 @@ Environment="MAIL_ENABLED=false"
 Environment="PORT=$APP_PORT"
 Environment="UPLOADS_DIR=/opt/rentequip/uploads"
 Environment="CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS"
+Environment="STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}"
+Environment="DEMO_DATA_ENABLED=${DEMO_DATA_ENABLED:-false}"
+Environment="DEMO_PASSWORD=${DEMO_PASSWORD:-}"
+Environment="TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}"
+Environment="TWILIO_API_KEY_SID=${TWILIO_API_KEY_SID:-}"
+Environment="TWILIO_API_KEY_SECRET=${TWILIO_API_KEY_SECRET:-}"
+Environment="TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}"
+Environment="TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM:-}"
+Environment="WHATSAPP_EMPRESAS_TOKEN=${WHATSAPP_EMPRESAS_TOKEN:-}"
 
 [Install]
 WantedBy=multi-user.target

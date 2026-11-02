@@ -1,16 +1,19 @@
 package com.rentequip.backend.controllers;
 
 import com.rentequip.backend.dtos.request.PaymentRequest;
+import com.rentequip.backend.dtos.request.ReceiptDeliveryRequest;
 import com.rentequip.backend.dtos.request.ReservationCreateRequest;
 import com.rentequip.backend.dtos.request.ReservationStatusUpdateRequest;
 import com.rentequip.backend.dtos.response.AvailabilityResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.dtos.response.PaymentResponse;
+import com.rentequip.backend.dtos.response.ReceiptDeliveryResponse;
 import com.rentequip.backend.dtos.response.ReservationResponse;
 import com.rentequip.backend.enums.ReservationRole;
 import com.rentequip.backend.enums.ReservationStatus;
 import com.rentequip.backend.hateoas.ReservationModelAssembler;
 import com.rentequip.backend.services.PaymentService;
+import com.rentequip.backend.services.ReceiptService;
 import com.rentequip.backend.services.ReservationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -48,6 +51,7 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final ReservationModelAssembler reservationAssembler;
     private final PaymentService paymentService;
+    private final ReceiptService receiptService;
 
     @PostMapping
     public ResponseEntity<EntityModel<ReservationResponse>> create(
@@ -109,6 +113,14 @@ public class ReservationController {
             @PathVariable Long id,
             @Valid @RequestBody PaymentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.pay(id, request));
+    }
+
+    /** Re-sends the receipt of a paid reservation to the caller's email or WhatsApp. */
+    @PostMapping("/{id}/receipt-deliveries")
+    public ResponseEntity<ReceiptDeliveryResponse> sendReceipt(
+            @PathVariable Long id,
+            @Valid @RequestBody ReceiptDeliveryRequest request) {
+        return ResponseEntity.ok(receiptService.send(id, request.channel()));
     }
 
     @GetMapping("/{id}/payments")
