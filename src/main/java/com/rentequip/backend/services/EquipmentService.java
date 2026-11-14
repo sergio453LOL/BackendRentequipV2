@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,8 +39,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class EquipmentService {
 
-    private static final double MAX_SEARCH_RADIUS_KM = 1000.0;
+    /** From Lima this covers all of Peru: Iquitos and Tacna sit about 1,000 km away, the far north 1,300 km. */
+    private static final double MAX_SEARCH_RADIUS_KM = 1500.0;
     private static final double DEFAULT_SEARCH_RADIUS_KM = 25.0;
+
+    /** Placeholder for an absent date window; the query ignores it when the date flag is off. */
+    private static final LocalDate NO_DATE = LocalDate.of(1970, 1, 1);
 
     /** Lima's Plaza Mayor: origin of the catalogue when the client sends no GPS coordinates. */
     static final BigDecimal DEFAULT_LATITUDE = new BigDecimal("-12.04637");
@@ -108,13 +113,28 @@ public class EquipmentService {
                                                                  String city, BigDecimal maxDailyRate,
                                                                  LocalDate startDate, LocalDate endDate,
                                                                  Long excludedOwnerId, int page, int size) {
+        return searchCatalog(latitude, longitude, radiusKm, query, categoryId, null, city, maxDailyRate, startDate,
+                endDate, excludedOwnerId, page, size);
+    }
+
+    /**
+     * Same search, matching any of several categories: the web's "type of work" filter groups related
+     * categories (earthmoving = excavators, backhoes and skid steers).
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<EquipmentSummaryResponse> searchCatalog(BigDecimal latitude, BigDecimal longitude,
+                                                                 Double radiusKm, String query, Long categoryId,
+                                                                 Collection<Long> categoryIds, String city,
+                                                                 BigDecimal maxDailyRate, LocalDate startDate,
+                                                                 LocalDate endDate, Long excludedOwnerId,
+                                                                 int page, int size) {
         boolean hasLocation = latitude != null && longitude != null;
         double effectiveRadius = radiusKm != null
                 ? radiusKm
                 : hasLocation ? DEFAULT_SEARCH_RADIUS_KM : MAX_SEARCH_RADIUS_KM;
         return runSearch(hasLocation ? latitude : DEFAULT_LATITUDE, hasLocation ? longitude : DEFAULT_LONGITUDE,
-                effectiveRadius, query, categoryId, city, maxDailyRate, startDate, endDate, excludedOwnerId,
-                page, size);
+                effectiveRadius, query, categoryFilter(categoryId, categoryIds), city, maxDailyRate, startDate,
+                endDate, excludedOwnerId, page, size);
     }
 
     /**
@@ -127,21 +147,26 @@ public class EquipmentService {
                                                           BigDecimal maxDailyRate, LocalDate startDate,
                                                           LocalDate endDate, Long excludedOwnerId,
                                                           int page, int size) {
-        return runSearch(latitude, longitude, radiusKm, null, categoryId, city, maxDailyRate, startDate, endDate,
-                excludedOwnerId, page, size);
+        return runSearch(latitude, longitude, radiusKm, null, categoryFilter(categoryId, null), city, maxDailyRate,
+                startDate, endDate, excludedOwnerId, page, size);
     }
 
     private PageResponse<EquipmentSummaryResponse> runSearch(BigDecimal latitude, BigDecimal longitude,
-                                                             double radiusKm, String query, Long categoryId,
+                                                             double radiusKm, String query, Set<Long> categoryIds,
                                                              String city, BigDecimal maxDailyRate,
                                                              LocalDate startDate, LocalDate endDate,
                                                              Long excludedOwnerId, int page, int size) {
         validateRadius(radiusKm);
         validateSearchDates(startDate, endDate);
-        validateCategoryExists(categoryId);
+        categoryIds.forEach(this::validateCategoryExists);
 
-        Page<Equipment> results = equipmentRepository.searchNearby(latitude, longitude, radiusKm, categoryId,
-                normalize(city), toContainsPattern(query), maxDailyRate, startDate, endDate, excludedOwnerId,
+        // An empty IN () is invalid SQL, so "no category filter" travels as a flag with a placeholder id.
+        boolean anyCategory = !categoryIds.isEmpty();
+        // Same for dates: PostgreSQL cannot type a null date parameter, so the window travels as a flag.
+        boolean anyDates = startDate != null && endDate != null;
+        Page<Equipment> results = equipmentRepository.searchNearby(latitude, longitude, radiusKm, anyCategory,
+                anyCategory ? categoryIds : Set.of(-1L), normalize(city), toContainsPattern(query), maxDailyRate,
+                anyDates, anyDates ? startDate : NO_DATE, anyDates ? endDate : NO_DATE, excludedOwnerId,
                 PageRequest.of(page, size));
         return PageResponse.from(results, equipmentMapper::toSummary);
     }
@@ -225,6 +250,13 @@ public class EquipmentService {
         if (endDate.isBefore(startDate)) {
             throw new InvalidReservationDateException("End date must be on or after start date");
         }
+    }
+
+    private static Set<Long> categoryFilter(Long categoryId, Collection<Long> categoryIds) {
+        Set<Long> ids = new LinkedHashSet<>();
+        if (categoryId != null) ids.add(categoryId);
+        if (categoryIds != null) categoryIds.stream().filter(id -> id != null).forEach(ids::add);
+        return ids;
     }
 
     private void validateCategoryExists(Long categoryId) {

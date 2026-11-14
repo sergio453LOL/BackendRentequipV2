@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Offline recommender used when the language model is not available. It maps the task the user describes
@@ -52,26 +53,8 @@ public class CatalogKeywordRecommender {
 
     public AssistantAnswer recommend(String question, List<EquipmentSummaryResponse> catalog) {
         String normalizedQuestion = normalize(question);
-        Set<String> terms = new HashSet<>();
-        TASK_TERMS.forEach((task, machines) -> {
-            if (normalizedQuestion.contains(task)) terms.addAll(machines);
-        });
-        for (String word : normalizedQuestion.split("[^a-z0-9]+")) {
-            if (word.length() > 2 && !STOP_WORDS.contains(word)) terms.add(word);
-        }
-        String city = catalog.stream()
-                .map(EquipmentSummaryResponse::city)
-                .filter(name -> name != null && normalizedQuestion.contains(normalize(name)))
-                .findFirst()
-                .orElse(null);
-
-        List<EquipmentSummaryResponse> ranked = catalog.stream()
-                .map(item -> new Scored(item, score(item, terms, city)))
-                .filter(scored -> scored.score() > 0)
-                .sorted(Comparator.comparingInt(Scored::score).reversed())
-                .limit(MAX_RECOMMENDATIONS)
-                .map(Scored::item)
-                .toList();
+        String city = cityIn(normalizedQuestion, catalog);
+        List<EquipmentSummaryResponse> ranked = rank(question, catalog, MAX_RECOMMENDATIONS);
 
         if (ranked.isEmpty()) {
             return new AssistantAnswer("No encontré en el catálogo un equipo que encaje con lo que describes. "
@@ -83,6 +66,53 @@ public class CatalogKeywordRecommender {
         return new AssistantAnswer("Según lo que necesitas, te sugiero revisar" + where + ": " + names
                 + ". Abre cada ficha para ver especificaciones, disponibilidad y solicitar la reserva.",
                 ranked.stream().map(EquipmentSummaryResponse::id).toList());
+    }
+
+    /**
+     * The catalogue items that match the text, best first, at most {@code limit}. The language model only
+     * gets these candidates instead of the whole catalogue, which keeps each request small.
+     */
+    public List<EquipmentSummaryResponse> rank(String text, List<EquipmentSummaryResponse> catalog, int limit) {
+        String normalizedText = normalize(text);
+        Set<String> terms = new HashSet<>();
+        TASK_TERMS.forEach((task, machines) -> {
+            if (normalizedText.contains(task)) terms.addAll(machines);
+        });
+        for (String word : normalizedText.split("[^a-z0-9]+")) {
+            if (word.length() > 2 && !STOP_WORDS.contains(word)) terms.add(word);
+        }
+        String city = cityIn(normalizedText, catalog);
+
+        return catalog.stream()
+                .map(item -> new Scored(item, score(item, terms, city)))
+                .filter(scored -> scored.score() > 0)
+                .sorted(Comparator.comparingInt(Scored::score).reversed())
+                .limit(limit)
+                .map(Scored::item)
+                .toList();
+    }
+
+    /**
+     * A task or machine name at the start of a word, so "izar" matches "izar una viga" but not "organizar".
+     */
+    private static final Pattern TASK_WORD = Pattern.compile("\\b(" + String.join("|", TASK_TERMS.entrySet().stream()
+            .flatMap(entry -> Stream.concat(Stream.of(entry.getKey()),
+                    entry.getValue().stream()))
+            .distinct()
+            .map(Pattern::quote)
+            .toList()) + ")");
+
+    /** True when the text names a task or a machine this recommender knows (excavar, nivelar, grúa...). */
+    static boolean mentionsTask(String normalizedText) {
+        return TASK_WORD.matcher(normalizedText).find();
+    }
+
+    private static String cityIn(String normalizedText, List<EquipmentSummaryResponse> catalog) {
+        return catalog.stream()
+                .map(EquipmentSummaryResponse::city)
+                .filter(name -> name != null && normalizedText.contains(normalize(name)))
+                .findFirst()
+                .orElse(null);
     }
 
     private int score(EquipmentSummaryResponse item, Set<String> terms, String city) {
@@ -97,7 +127,7 @@ public class CatalogKeywordRecommender {
         return score;
     }
 
-    private static String normalize(String text) {
+    static String normalize(String text) {
         String decomposed = Normalizer.normalize(text == null ? "" : text, Normalizer.Form.NFD);
         return DIACRITICS.matcher(decomposed).replaceAll("").toLowerCase(Locale.ROOT);
     }

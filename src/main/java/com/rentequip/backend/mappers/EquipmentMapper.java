@@ -43,6 +43,7 @@ public class EquipmentMapper {
         equipment.setLatitude(request.latitude());
         equipment.setLongitude(request.longitude());
         equipment.setOwner(owner);
+        equipment.setOperatorIncluded(Boolean.TRUE.equals(request.operatorIncluded()));
         if (request.imageUrls() != null) {
             equipment.getImageUrls().addAll(request.imageUrls());
         }
@@ -55,6 +56,7 @@ public class EquipmentMapper {
         applyPricing(equipment, request);
         applyLocation(equipment, request);
         applyIfPresent(request.status(), equipment::setStatus);
+        applyIfPresent(request.operatorIncluded(), equipment::setOperatorIncluded);
         if (request.imageUrls() != null) {
             equipment.getImageUrls().clear();
             equipment.getImageUrls().addAll(request.imageUrls());
@@ -88,7 +90,8 @@ public class EquipmentMapper {
                 categoryNames(equipment),
                 equipment.getOwner().getId(),
                 equipment.getOwner().getName(),
-                equipment.getCreatedAt()
+                equipment.getCreatedAt(),
+                equipment.isOperatorIncluded()
         );
     }
 
@@ -106,7 +109,8 @@ public class EquipmentMapper {
                 equipment.getLongitude(),
                 primaryImageUrl(equipment),
                 equipment.getOwner().getId(),
-                equipment.getOwner().getName()
+                equipment.getOwner().getName(),
+                equipment.isOperatorIncluded()
         );
     }
 

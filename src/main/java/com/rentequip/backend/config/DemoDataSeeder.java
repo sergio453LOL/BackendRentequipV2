@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Loads a demo catalogue of heavy machinery and construction tools, with real brands, models and photos,
@@ -34,12 +36,13 @@ import java.util.Map;
  */
 @Component
 @ConditionalOnProperty(name = "rentequip.demo-data.enabled", havingValue = "true")
+@Order(1)
 public class DemoDataSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
 
     /** General tag on every hand tool, on top of its specific category, so tools can be counted and filtered. */
-    private static final String TOOLS = "Herramientas";
+    static final String TOOLS = "Herramientas";
 
     private record CompanySeed(String key, String name, String taxId, String email, String address, String city,
                                String latitude, String longitude) {
@@ -48,7 +51,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     private record CategorySeed(String name, String description) {
     }
 
-    private record EquipmentSeed(String owner, List<String> categories, String name, String brand, String model, int year,
+    /** Heavy machines are rented with their operator; tools and light equipment are not. */
+    static final Set<String> OPERATED_CATEGORIES = Set.of("Excavadoras", "Retroexcavadoras", "Minicargadores",
+            "Elevación", "Compactación");
+
+    record EquipmentSeed(String owner, List<String> categories, String name, String brand, String model, int year,
                                  String description, String specifications, String dailyRate, String weeklyRate,
                                  String deposit, String image) {
     }
@@ -74,7 +81,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             new CategorySeed("Demolición", "Martillos demoledores y rompepavimentos"),
             new CategorySeed("Concreto", "Vibradores y equipos para vaciado de concreto"));
 
-    private static final List<EquipmentSeed> EQUIPMENT = List.of(
+    static final List<EquipmentSeed> EQUIPMENT = List.of(
             new EquipmentSeed("andinas", List.of("Excavadoras"), "Excavadora Caterpillar 320", "Caterpillar", "320", 2019,
                     "Excavadora de 22 t para movimiento de tierras, zanjas y cimentaciones. Se entrega con operador opcional.",
                     "Peso operativo: 22 t\nPotencia: 121 kW\nProfundidad máxima de excavación: 6.7 m\nCucharón: 1.2 m³",
@@ -234,6 +241,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         equipment.setLatitude(owner.getLatitude().add(offset));
         equipment.setLongitude(owner.getLongitude().subtract(offset.multiply(new BigDecimal("0.7"))));
         equipment.getImageUrls().add("/demo-images/" + seed.image());
+        equipment.setOperatorIncluded(seed.categories().stream().anyMatch(OPERATED_CATEGORIES::contains));
         return equipment;
     }
 }

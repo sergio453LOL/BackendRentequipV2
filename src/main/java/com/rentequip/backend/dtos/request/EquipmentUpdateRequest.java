@@ -68,6 +68,8 @@ public record EquipmentUpdateRequest(
         List<@NotBlank @Size(max = 500) String> imageUrls,
 
         @Size(min = 1)
-        Set<@NotNull Long> categoryIds
+        Set<@NotNull Long> categoryIds,
+
+        Boolean operatorIncluded
 ) {
 }

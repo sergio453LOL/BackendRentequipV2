@@ -95,9 +95,10 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
     public ResponseEntity<PageResponse<EquipmentSummaryResponse>> search(
             @RequestParam(required = false) @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal latitude,
             @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal longitude,
-            @RequestParam(required = false) @DecimalMin("0.1") @DecimalMax("1000.0") Double radiusKm,
+            @RequestParam(required = false) @DecimalMin("0.1") @DecimalMax("1500.0") Double radiusKm,
             @RequestParam(required = false) @Size(max = 100) String q,
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) @Size(max = 20) List<Long> categoryIds,
             @RequestParam(required = false) String city,
             @RequestParam(required = false) @DecimalMin("0.0") BigDecimal maxDailyRate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -105,8 +106,8 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
             @RequestParam(required = false) Long excludeOwnerId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return ResponseEntity.ok(equipmentService.searchCatalog(latitude, longitude, radiusKm, q, categoryId, city,
-                maxDailyRate, startDate, endDate, excludeOwnerId, page, size));
+        return ResponseEntity.ok(equipmentService.searchCatalog(latitude, longitude, radiusKm, q, categoryId, categoryIds,
+                city, maxDailyRate, startDate, endDate, excludeOwnerId, page, size));
     }
 
     @GetMapping("/{id}/reservations")

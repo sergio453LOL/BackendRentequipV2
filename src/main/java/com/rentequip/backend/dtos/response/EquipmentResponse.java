@@ -30,6 +30,7 @@ public record EquipmentResponse(
         Set<String> categories,
         Long ownerCompanyId,
         String ownerCompanyName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean operatorIncluded
 ) {
 }

@@ -69,6 +69,9 @@ public record EquipmentCreateRequest(
         Set<@NotNull Long> categoryIds,
 
         @NotNull
-        Long ownerCompanyId
+        Long ownerCompanyId,
+
+        /** Optional; absent means the rate does not include an operator. */
+        Boolean operatorIncluded
 ) {
 }

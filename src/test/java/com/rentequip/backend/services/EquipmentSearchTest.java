@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,6 +50,7 @@ class EquipmentSearchTest {
     private HandoverPhotoRepository handoverPhotoRepository;
 
     private Long excavatorCategoryId;
+    private Long generatorCategoryId;
 
     @BeforeEach
     void setUp() {
@@ -62,6 +64,7 @@ class EquipmentSearchTest {
         EquipmentCategory excavators = categoryRepository.save(category("Excavadoras"));
         EquipmentCategory generators = categoryRepository.save(category("Generadores"));
         excavatorCategoryId = excavators.getId();
+        generatorCategoryId = generators.getId();
 
         Company owner = companyRepository.save(company("Constructora Andina", "20100000001", "owner@test.pe"));
         equipmentRepository.save(equipment(owner, excavators, "Excavadora cercana",
@@ -93,6 +96,15 @@ class EquipmentSearchTest {
         assertThat(results.totalElements()).isEqualTo(2);
         assertThat(results.content()).extracting(EquipmentSummaryResponse::name)
                 .containsExactly("Excavadora cercana", "Excavadora en Arequipa");
+    }
+
+    @Test
+    void matchesAnyOfSeveralCategories() {
+        PageResponse<EquipmentSummaryResponse> results = equipmentService.searchCatalog(LIMA_LAT, LIMA_LNG, 25.0,
+                null, null, List.of(excavatorCategoryId, generatorCategoryId), null, null, null, null, null, 0, 20);
+
+        assertThat(results.content()).extracting(EquipmentSummaryResponse::name)
+                .containsExactly("Excavadora cercana", "Generador cercano");
     }
 
     @Test

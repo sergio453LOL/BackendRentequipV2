@@ -245,6 +245,18 @@ class CheckoutUploadAndAssistantTest {
     }
 
     @Test
+    void assistantAnswersOffTopicQuestionsLocallyWithoutRecommendations() throws Exception {
+        mockMvc.perform(post("/api/v1/assistant/chat")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"messages":[{"role":"user","content":"Escríbeme un poema sobre el mar"}]}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.source").value("guardrail"))
+                .andExpect(jsonPath("$.recommendations").isEmpty());
+    }
+
+    @Test
     void assistantRejectsAConversationThatDoesNotEndWithTheUser() throws Exception {
         mockMvc.perform(post("/api/v1/assistant/chat")
                         .header(HttpHeaders.AUTHORIZATION, bearer(renterToken))

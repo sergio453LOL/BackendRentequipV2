@@ -103,6 +103,10 @@ public class Equipment extends BaseEntity {
     @Column(nullable = false, length = 20)
     private EquipmentStatus status = EquipmentStatus.AVAILABLE;
 
+    /** The rate includes a qualified operator; renters filter and see it on the card. */
+    @Column(name = "operator_included", nullable = false, columnDefinition = "boolean default false")
+    private boolean operatorIncluded = false;
+
     @Size(max = 255)
     @Column(length = 255)
     private String address;

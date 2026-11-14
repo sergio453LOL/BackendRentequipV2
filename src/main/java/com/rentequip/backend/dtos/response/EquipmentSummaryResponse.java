@@ -20,6 +20,7 @@ public record EquipmentSummaryResponse(
         BigDecimal longitude,
         String primaryImageUrl,
         Long ownerCompanyId,
-        String ownerCompanyName
+        String ownerCompanyName,
+        boolean operatorIncluded
 ) {
 }

@@ -16,6 +16,7 @@ import jakarta.persistence.QueryHint;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -63,9 +64,9 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     @Query(value = """
             SELECT e FROM Equipment e
             WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE
-              AND (:categoryId IS NULL
+              AND (:anyCategory = false
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
-                              WHERE eq.id = e.id AND c.id = :categoryId))
+                              WHERE eq.id = e.id AND c.id IN :categoryIds))
               AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
               AND (:namePattern IS NULL
                    OR lower(e.name) LIKE cast(:namePattern as string)
@@ -75,7 +76,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """
               <= :radiusKm
-              AND (:startDate IS NULL OR :endDate IS NULL
+              AND (:anyDates = false
                    OR NOT EXISTS (SELECT 1 FROM Reservation r
                                   WHERE r.equipment.id = e.id
                                     AND r.status IN (com.rentequip.backend.enums.ReservationStatus.PENDING,
@@ -87,9 +88,9 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
             countQuery = """
             SELECT count(e) FROM Equipment e
             WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE
-              AND (:categoryId IS NULL
+              AND (:anyCategory = false
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
-                              WHERE eq.id = e.id AND c.id = :categoryId))
+                              WHERE eq.id = e.id AND c.id IN :categoryIds))
               AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
               AND (:namePattern IS NULL
                    OR lower(e.name) LIKE cast(:namePattern as string)
@@ -99,7 +100,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
               AND (:excludedOwnerId IS NULL OR e.owner.id <> :excludedOwnerId)
               AND """ + DISTANCE_KM + """
               <= :radiusKm
-              AND (:startDate IS NULL OR :endDate IS NULL
+              AND (:anyDates = false
                    OR NOT EXISTS (SELECT 1 FROM Reservation r
                                   WHERE r.equipment.id = e.id
                                     AND r.status IN (com.rentequip.backend.enums.ReservationStatus.PENDING,
@@ -111,10 +112,12 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     Page<Equipment> searchNearby(@Param("latitude") BigDecimal latitude,
                                  @Param("longitude") BigDecimal longitude,
                                  @Param("radiusKm") double radiusKm,
-                                 @Param("categoryId") Long categoryId,
+                                 @Param("anyCategory") boolean anyCategory,
+                                 @Param("categoryIds") Collection<Long> categoryIds,
                                  @Param("city") String city,
                                  @Param("namePattern") String namePattern,
                                  @Param("maxDailyRate") BigDecimal maxDailyRate,
+                                 @Param("anyDates") boolean anyDates,
                                  @Param("startDate") LocalDate startDate,
                                  @Param("endDate") LocalDate endDate,
                                  @Param("excludedOwnerId") Long excludedOwnerId,
