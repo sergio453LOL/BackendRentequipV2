@@ -76,7 +76,8 @@ public class ReviewService {
     public EquipmentRatingResponse findAverageRating(Long equipmentId) {
         assertEquipmentExists(equipmentId);
         double average = reviewRepository.findAverageRatingByEquipmentId(equipmentId).orElse(0.0);
-        return new EquipmentRatingResponse(equipmentId, average);
+        long count = reviewRepository.countByEquipmentId(equipmentId);
+        return new EquipmentRatingResponse(equipmentId, average, count);
     }
 
     private Review findOrThrow(Long reviewId) {

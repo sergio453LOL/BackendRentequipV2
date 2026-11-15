@@ -26,6 +26,7 @@ public class ReviewMapper {
                 reservation.getId(),
                 reservation.getEquipment().getId(),
                 reservation.getRenter().getId(),
+                reservation.getRenter().getName(),
                 review.getRating(),
                 review.getConditionRating(),
                 review.getComment(),

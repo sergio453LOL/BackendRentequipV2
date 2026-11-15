@@ -7,6 +7,7 @@ public record ReviewResponse(
         Long reservationId,
         Long equipmentId,
         Long reviewerCompanyId,
+        String reviewerCompanyName,
         Integer rating,
         Integer conditionRating,
         String comment,

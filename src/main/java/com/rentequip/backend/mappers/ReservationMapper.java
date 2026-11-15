@@ -42,7 +42,8 @@ public class ReservationMapper {
                 reservation.getStatus(),
                 reservation.getNotes(),
                 PaymentService.paymentStatusOf(reservation),
-                reservation.getCreatedAt()
+                reservation.getCreatedAt(),
+                reservation.getReview() != null
         );
     }
 }
