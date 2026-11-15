@@ -58,8 +58,9 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     /**
      * Proximity search. Every filter except the coordinates and the radius is optional: passing null
-     * disables that predicate. Results are ordered by distance, so callers must supply an unsorted
-     * Pageable to avoid appending a second ORDER BY clause.
+     * disables that predicate. {@code sort} is a {@link com.rentequip.backend.enums.CatalogSort} name:
+     * each CASE only orders when its option is chosen, and distance always breaks the ties, so NEAREST
+     * is the plain proximity order. Callers must supply an unsorted Pageable to keep a single ORDER BY.
      */
     @Query(value = """
             SELECT e FROM Equipment e
@@ -84,7 +85,10 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                                                      com.rentequip.backend.enums.ReservationStatus.IN_PROGRESS)
                                     AND r.startDate <= :endDate
                                     AND r.endDate >= :startDate))
-            ORDER BY """ + DISTANCE_KM,
+            ORDER BY CASE WHEN :sort = 'PRICE_ASC' THEN e.dailyRate END ASC,
+                     CASE WHEN :sort = 'PRICE_DESC' THEN e.dailyRate END DESC,
+                     CASE WHEN :sort = 'NEWEST' THEN e.createdAt END DESC,
+                     """ + DISTANCE_KM + ", e.id",
             countQuery = """
             SELECT count(e) FROM Equipment e
             WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE
@@ -121,6 +125,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                                  @Param("startDate") LocalDate startDate,
                                  @Param("endDate") LocalDate endDate,
                                  @Param("excludedOwnerId") Long excludedOwnerId,
+                                 @Param("sort") String sort,
                                  Pageable pageable);
 
     /**

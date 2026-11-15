@@ -8,6 +8,7 @@ import com.rentequip.backend.dtos.response.EquipmentSummaryResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.dtos.response.ReservationResponse;
 import com.rentequip.backend.dtos.response.ReviewResponse;
+import com.rentequip.backend.enums.CatalogSort;
 import com.rentequip.backend.hateoas.EquipmentModelAssembler;
 import com.rentequip.backend.services.EquipmentService;
 import com.rentequip.backend.services.ReservationService;
@@ -104,10 +105,11 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long excludeOwnerId,
+            @RequestParam(defaultValue = "NEAREST") CatalogSort sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(equipmentService.searchCatalog(latitude, longitude, radiusKm, q, categoryId, categoryIds,
-                city, maxDailyRate, startDate, endDate, excludeOwnerId, page, size));
+                city, maxDailyRate, startDate, endDate, excludeOwnerId, sort, page, size));
     }
 
     @GetMapping("/{id}/reservations")

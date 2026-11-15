@@ -6,6 +6,7 @@ import com.rentequip.backend.dtos.response.EquipmentResponse;
 import com.rentequip.backend.dtos.response.EquipmentSummaryResponse;
 import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.entities.Company;
+import com.rentequip.backend.enums.CatalogSort;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.EquipmentCategory;
 import com.rentequip.backend.exceptions.DuplicateResourceException;
@@ -128,13 +129,25 @@ public class EquipmentService {
                                                                  BigDecimal maxDailyRate, LocalDate startDate,
                                                                  LocalDate endDate, Long excludedOwnerId,
                                                                  int page, int size) {
+        return searchCatalog(latitude, longitude, radiusKm, query, categoryId, categoryIds, city, maxDailyRate,
+                startDate, endDate, excludedOwnerId, CatalogSort.NEAREST, page, size);
+    }
+
+    /** Same search in the order the visitor picked: nearest, cheapest, most expensive or newest first. */
+    @Transactional(readOnly = true)
+    public PageResponse<EquipmentSummaryResponse> searchCatalog(BigDecimal latitude, BigDecimal longitude,
+                                                                 Double radiusKm, String query, Long categoryId,
+                                                                 Collection<Long> categoryIds, String city,
+                                                                 BigDecimal maxDailyRate, LocalDate startDate,
+                                                                 LocalDate endDate, Long excludedOwnerId,
+                                                                 CatalogSort sort, int page, int size) {
         boolean hasLocation = latitude != null && longitude != null;
         double effectiveRadius = radiusKm != null
                 ? radiusKm
                 : hasLocation ? DEFAULT_SEARCH_RADIUS_KM : MAX_SEARCH_RADIUS_KM;
         return runSearch(hasLocation ? latitude : DEFAULT_LATITUDE, hasLocation ? longitude : DEFAULT_LONGITUDE,
                 effectiveRadius, query, categoryFilter(categoryId, categoryIds), city, maxDailyRate, startDate,
-                endDate, excludedOwnerId, page, size);
+                endDate, excludedOwnerId, sort, page, size);
     }
 
     /**
@@ -148,14 +161,15 @@ public class EquipmentService {
                                                           LocalDate endDate, Long excludedOwnerId,
                                                           int page, int size) {
         return runSearch(latitude, longitude, radiusKm, null, categoryFilter(categoryId, null), city, maxDailyRate,
-                startDate, endDate, excludedOwnerId, page, size);
+                startDate, endDate, excludedOwnerId, CatalogSort.NEAREST, page, size);
     }
 
     private PageResponse<EquipmentSummaryResponse> runSearch(BigDecimal latitude, BigDecimal longitude,
                                                              double radiusKm, String query, Set<Long> categoryIds,
                                                              String city, BigDecimal maxDailyRate,
                                                              LocalDate startDate, LocalDate endDate,
-                                                             Long excludedOwnerId, int page, int size) {
+                                                             Long excludedOwnerId, CatalogSort sort,
+                                                             int page, int size) {
         validateRadius(radiusKm);
         validateSearchDates(startDate, endDate);
         categoryIds.forEach(this::validateCategoryExists);
@@ -167,7 +181,7 @@ public class EquipmentService {
         Page<Equipment> results = equipmentRepository.searchNearby(latitude, longitude, radiusKm, anyCategory,
                 anyCategory ? categoryIds : Set.of(-1L), normalize(city), toContainsPattern(query), maxDailyRate,
                 anyDates, anyDates ? startDate : NO_DATE, anyDates ? endDate : NO_DATE, excludedOwnerId,
-                PageRequest.of(page, size));
+                (sort == null ? CatalogSort.NEAREST : sort).name(), PageRequest.of(page, size));
         return PageResponse.from(results, equipmentMapper::toSummary);
     }
 

@@ -175,7 +175,7 @@ El cuerpo es siempre el mismo `ErrorResponse`: `timestamp`, `status`, `error`, `
 
 **Prevención de vulnerabilidades.** Contra **inyección SQL**, todo el acceso a datos pasa por Spring Data JPA con consultas parametrizadas (`@Param`); no hay concatenación de strings en ninguna query. Contra **XSS**, la API responde exclusivamente JSON y `spring.web.resources.add-mappings=false` desactiva el servido de estáticos. Contra **CSRF**, la protección se desactiva deliberadamente porque la sesión es `STATELESS`: no hay cookie que un tercero pueda reutilizar. **CORS** está restringido por patrón de origen (`localhost` y `*.vercel.app`). La validación opera en dos capas: `@Valid` sobre los DTOs y constraints de columna en las entidades, de forma que ni una escritura directa pueda violar las invariantes.
 
-**Autenticación con JWT.** `POST /api/v1/auth/register` da de alta empresa y administrador en una transacción; `/auth/login` devuelve access y refresh token firmados con HMAC-SHA256, con los claims `userId`, `email`, `companyId` y `role`. `JwtAuthenticationFilter` extrae el token de `Authorization: Bearer`, lo valida y puebla el `SecurityContext`; si falta o es inválido, el `AuthenticationEntryPoint` responde 401 con el `ErrorResponse` de siempre. La clave sale de `JWT_SECRET`. `/auth/refresh` recarga al usuario desde la base en lugar de confiar en el token, para que una baja o un cambio de rol surtan efecto de inmediato.
+**Autenticación con JWT.** `POST /api/v1/auth/register` da de alta empresa y administrador en una transacción; `/auth/login` devuelve access y refresh token firmados con HMAC-SHA256, con los claims `userId`, `email`, `companyId` y `role`. `JwtAuthenticationFilter` extrae el token de `Authorization: Bearer`, lo valida y puebla el `SecurityContext`; si falta o es inválido, el `AuthenticationEntryPoint` responde 401 con el `ErrorResponse` de siempre. La clave sale de `JWT_SECRET`. `/auth/refresh` recarga al usuario desde la base en lugar de confiar en el token, para que una baja o un cambio de rol surtan efecto de inmediato. El refresh token nuevo hereda el vencimiento del anterior, así que la sesión dura como máximo `JWT_SESSION_HOURS` desde el login y después hay que volver a iniciar sesión.
 
 **Autorización en dos niveles.** El rol se comprueba con `@PreAuthorize` en los controladores (`@EnableMethodSecurity` activo): `ADMIN` gestiona usuarios y empresa, `ADMIN` y `MANAGER` publican maquinaria y confirman reservas, y cualquier autenticado reserva y reseña. La pertenencia del recurso se verifica aparte, en los servicios, que leen la identidad del `SecurityContext` vía `CurrentUser` y responden 403 ante un recurso ajeno. La empresa arrendataria **nunca viaja en el cuerpo**: sale del token.
 
@@ -213,8 +213,8 @@ Swagger UI queda en `http://localhost:8080/swagger-ui.html`, con botón *Authori
 | `DDL_AUTO` | `update` | Estrategia de esquema de Hibernate |
 | `PORT` | `8080` | Puerto del servidor |
 | `JWT_SECRET` | clave de desarrollo | Clave de firma de los tokens, mínimo 32 bytes. **Obligatorio en producción** |
-| `JWT_ACCESS_MINUTES` | `60` | Vigencia del access token |
-| `JWT_REFRESH_DAYS` | `7` | Vigencia del refresh token |
+| `JWT_ACCESS_MINUTES` | `15` | Vigencia del access token |
+| `JWT_SESSION_HOURS` | `8` | Duración máxima de la sesión desde el login; al renovar el token no se alarga |
 | `MAIL_HOST` / `MAIL_PORT` | `localhost` / `1025` | SMTP. En Docker apunta a Mailpit |
 | `MAIL_ENABLED` | `true` | `false` desactiva el envío y solo registra |
 | `MAIL_FROM` | `no-reply@rentequip.pe` | Remitente de las notificaciones |

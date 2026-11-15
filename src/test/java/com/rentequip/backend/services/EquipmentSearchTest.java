@@ -5,6 +5,7 @@ import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.EquipmentCategory;
+import com.rentequip.backend.enums.CatalogSort;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
@@ -159,6 +160,28 @@ class EquipmentSearchTest {
 
         assertThat(results.content()).extracting(EquipmentSummaryResponse::name)
                 .containsExactly("Excavadora cercana", "Excavadora en Arequipa");
+    }
+
+    @Test
+    void sortsTheCatalogueByPriceBothWays() {
+        List<BigDecimal> cheapestFirst = sorted(CatalogSort.PRICE_ASC).content().stream()
+                .map(EquipmentSummaryResponse::dailyRate).toList();
+        List<BigDecimal> dearestFirst = sorted(CatalogSort.PRICE_DESC).content().stream()
+                .map(EquipmentSummaryResponse::dailyRate).toList();
+
+        assertThat(cheapestFirst).hasSize(3).isSortedAccordingTo(BigDecimal::compareTo);
+        assertThat(dearestFirst).isEqualTo(cheapestFirst.reversed());
+    }
+
+    @Test
+    void nearestIsTheDefaultProximityOrder() {
+        assertThat(sorted(CatalogSort.NEAREST).content()).extracting(EquipmentSummaryResponse::name)
+                .containsExactly("Excavadora cercana", "Generador cercano", "Excavadora en Arequipa");
+    }
+
+    private PageResponse<EquipmentSummaryResponse> sorted(CatalogSort sort) {
+        return equipmentService.searchCatalog(null, null, null, null, null, null, null, null, null, null, null,
+                sort, 0, 20);
     }
 
     private PageResponse<EquipmentSummaryResponse> search(double radiusKm, Long categoryId, BigDecimal maxDailyRate) {

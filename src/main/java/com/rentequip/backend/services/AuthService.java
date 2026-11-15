@@ -72,7 +72,9 @@ public class AuthService {
         if (!principal.isEnabled()) {
             throw new UnauthorizedException("This account has been disabled");
         }
-        return issueTokens(principal, companyNameOf(principal));
+        // The new refresh token inherits the session's expiry, so a session lasts a fixed time from login.
+        String refreshToken = jwtService.generateRefreshToken(principal, claims.getExpiration().toInstant());
+        return issueTokens(principal, companyNameOf(principal), refreshToken);
     }
 
     private CompanyUserDetails authenticate(LoginRequest request) {
@@ -104,9 +106,13 @@ public class AuthService {
     }
 
     private AuthResponse issueTokens(CompanyUserDetails principal, String companyName) {
+        return issueTokens(principal, companyName, jwtService.generateRefreshToken(principal));
+    }
+
+    private AuthResponse issueTokens(CompanyUserDetails principal, String companyName, String refreshToken) {
         return new AuthResponse(
                 jwtService.generateAccessToken(principal),
-                jwtService.generateRefreshToken(principal),
+                refreshToken,
                 AuthResponse.BEARER,
                 jwtService.accessTokenSeconds(),
                 principal.userId(),

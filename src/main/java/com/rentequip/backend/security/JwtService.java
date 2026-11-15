@@ -34,11 +34,11 @@ public class JwtService {
 
     private final SecretKey signingKey;
     private final Duration accessTokenTtl;
-    private final Duration refreshTokenTtl;
+    private final Duration sessionTtl;
 
     public JwtService(@Value("${rentequip.security.jwt.secret}") String secret,
                       @Value("${rentequip.security.jwt.access-token-minutes}") long accessTokenMinutes,
-                      @Value("${rentequip.security.jwt.refresh-token-days}") long refreshTokenDays) {
+                      @Value("${rentequip.security.jwt.session-hours}") long sessionHours) {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < MINIMUM_SECRET_BYTES) {
             throw new IllegalStateException(
@@ -46,15 +46,24 @@ public class JwtService {
         }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenTtl = Duration.ofMinutes(accessTokenMinutes);
-        this.refreshTokenTtl = Duration.ofDays(refreshTokenDays);
+        this.sessionTtl = Duration.ofHours(sessionHours);
     }
 
     public String generateAccessToken(CompanyUserDetails user) {
-        return buildToken(user, ACCESS_TOKEN, accessTokenTtl);
+        return buildToken(user, ACCESS_TOKEN, Instant.now().plus(accessTokenTtl));
     }
 
+    /** The refresh token of a fresh login: the session it opens ends {@code session-hours} from now. */
     public String generateRefreshToken(CompanyUserDetails user) {
-        return buildToken(user, REFRESH_TOKEN, refreshTokenTtl);
+        return buildToken(user, REFRESH_TOKEN, Instant.now().plus(sessionTtl));
+    }
+
+    /**
+     * The refresh token handed out on a refresh keeps the expiry of the session it continues. Renewing
+     * it never extends the session, so after {@code session-hours} the user signs in again, however active.
+     */
+    public String generateRefreshToken(CompanyUserDetails user, Instant sessionExpiresAt) {
+        return buildToken(user, REFRESH_TOKEN, sessionExpiresAt);
     }
 
     public long accessTokenSeconds() {
@@ -96,7 +105,7 @@ public class JwtService {
         );
     }
 
-    private String buildToken(CompanyUserDetails user, String tokenType, Duration ttl) {
+    private String buildToken(CompanyUserDetails user, String tokenType, Instant expiresAt) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(user.email())
@@ -107,7 +116,7 @@ public class JwtService {
                         CLAIM_ROLE, user.role().name(),
                         CLAIM_TOKEN_TYPE, tokenType))
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(ttl)))
+                .expiration(Date.from(expiresAt))
                 .signWith(signingKey)
                 .compact();
     }
