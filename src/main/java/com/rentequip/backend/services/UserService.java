@@ -1,5 +1,7 @@
 package com.rentequip.backend.services;
 
+import com.rentequip.backend.dtos.request.PasswordChangeRequest;
+import com.rentequip.backend.dtos.request.ProfileUpdateRequest;
 import com.rentequip.backend.dtos.request.UserCreateRequest;
 import com.rentequip.backend.dtos.request.UserUpdateRequest;
 import com.rentequip.backend.dtos.response.PageResponse;
@@ -10,6 +12,7 @@ import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.exceptions.DuplicateResourceException;
 import com.rentequip.backend.exceptions.ForbiddenOperationException;
 import com.rentequip.backend.exceptions.InvalidOperationException;
+import com.rentequip.backend.exceptions.PasswordChangeException;
 import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.mappers.UserMapper;
 import com.rentequip.backend.repositories.CompanyRepository;
@@ -50,6 +53,33 @@ public class UserService {
         }
         userMapper.updateEntity(user, request);
         return userMapper.toResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse findMe() {
+        return userMapper.toResponse(findOrThrow(currentUser.requireUserId()));
+    }
+
+    /**
+     * Self-service profile: the caller edits only their own name, phone and photo, never their role.
+     */
+    @Transactional
+    public UserResponse updateMe(ProfileUpdateRequest request) {
+        User user = findOrThrow(currentUser.requireUserId());
+        userMapper.applyProfile(user, request);
+        return userMapper.toResponse(user);
+    }
+
+    @Transactional
+    public void changeMyPassword(PasswordChangeRequest request) {
+        User user = findOrThrow(currentUser.requireUserId());
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw PasswordChangeException.wrongCurrentPassword();
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw PasswordChangeException.sameAsCurrent();
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
     }
 
     @Transactional

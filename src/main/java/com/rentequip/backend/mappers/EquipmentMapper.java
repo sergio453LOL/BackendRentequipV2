@@ -90,8 +90,12 @@ public class EquipmentMapper {
                 categoryNames(equipment),
                 equipment.getOwner().getId(),
                 equipment.getOwner().getName(),
+                equipment.getOwner().getLogoUrl(),
+                equipment.getOwner().getDescription(),
                 equipment.getCreatedAt(),
-                equipment.isOperatorIncluded()
+                equipment.isOperatorIncluded(),
+                equipment.getSalePrice(),
+                rentCreditPercentOf(equipment)
         );
     }
 
@@ -110,11 +114,16 @@ public class EquipmentMapper {
                 primaryImageUrl(equipment),
                 equipment.getOwner().getId(),
                 equipment.getOwner().getName(),
-                equipment.isOperatorIncluded()
+                equipment.isOperatorIncluded(),
+                equipment.getSalePrice()
         );
     }
 
-    private String primaryImageUrl(Equipment equipment) {
+    public static int rentCreditPercentOf(Equipment equipment) {
+        return equipment.getRentCreditPercent() == null ? 0 : equipment.getRentCreditPercent();
+    }
+
+    public String primaryImageUrl(Equipment equipment) {
         return equipment.getImageUrls().isEmpty() ? null : publicUrl(equipment.getImageUrls().get(0));
     }
 

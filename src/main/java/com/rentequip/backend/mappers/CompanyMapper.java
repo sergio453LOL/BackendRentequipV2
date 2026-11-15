@@ -1,6 +1,7 @@
 package com.rentequip.backend.mappers;
 
 import static com.rentequip.backend.mappers.MappingUtils.applyIfPresent;
+import static com.rentequip.backend.mappers.MappingUtils.blankToNull;
 
 import com.rentequip.backend.dtos.request.CompanyCreateRequest;
 import com.rentequip.backend.dtos.request.CompanyUpdateRequest;
@@ -33,6 +34,8 @@ public class CompanyMapper {
         applyIfPresent(request.city(), value -> company.setCity(value.trim()));
         applyIfPresent(request.latitude(), company::setLatitude);
         applyIfPresent(request.longitude(), company::setLongitude);
+        applyIfPresent(request.logoUrl(), value -> company.setLogoUrl(blankToNull(value)));
+        applyIfPresent(request.description(), value -> company.setDescription(blankToNull(value)));
     }
 
     public CompanyResponse toResponse(Company company) {
@@ -46,6 +49,8 @@ public class CompanyMapper {
                 company.getCity(),
                 company.getLatitude(),
                 company.getLongitude(),
+                company.getLogoUrl(),
+                company.getDescription(),
                 company.isActive(),
                 company.getCreatedAt()
         );

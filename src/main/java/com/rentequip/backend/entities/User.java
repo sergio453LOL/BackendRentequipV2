@@ -52,6 +52,11 @@ public class User extends BaseEntity {
     @Column(length = 20)
     private String phone;
 
+    /** Public URL of the profile photo; null shows the initials. */
+    @Size(max = 500)
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

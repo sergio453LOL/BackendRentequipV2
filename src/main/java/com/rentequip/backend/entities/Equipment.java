@@ -107,6 +107,18 @@ public class Equipment extends BaseEntity {
     @Column(name = "operator_included", nullable = false, columnDefinition = "boolean default false")
     private boolean operatorIncluded = false;
 
+    /** Price to buy the machine outright; null means it is only for rent. */
+    @DecimalMin("0.01")
+    @Digits(integer = 10, fraction = 2)
+    @Column(name = "sale_price", precision = 12, scale = 2)
+    private BigDecimal salePrice;
+
+    /** Share of the rent a renter already paid that is taken off the sale price (0-100; null is 0). */
+    @Min(0)
+    @Max(100)
+    @Column(name = "rent_credit_percent")
+    private Integer rentCreditPercent;
+
     @Size(max = 255)
     @Column(length = 255)
     private String address;

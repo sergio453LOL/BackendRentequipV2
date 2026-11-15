@@ -1,5 +1,7 @@
 package com.rentequip.backend.controllers;
 
+import com.rentequip.backend.dtos.request.PasswordChangeRequest;
+import com.rentequip.backend.dtos.request.ProfileUpdateRequest;
 import com.rentequip.backend.dtos.request.UserCreateRequest;
 import com.rentequip.backend.dtos.request.UserUpdateRequest;
 import com.rentequip.backend.dtos.response.UserResponse;
@@ -37,6 +39,23 @@ public class UserController {
         UserResponse created = userService.create(request);
         URI location = uriBuilder.path("/api/v1/users/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    /** The signed-in user's own profile, for any role. */
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> findMe() {
+        return ResponseEntity.ok(userService.findMe());
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<UserResponse> updateMe(@Valid @RequestBody ProfileUpdateRequest request) {
+        return ResponseEntity.ok(userService.updateMe(request));
+    }
+
+    @PostMapping("/me/password")
+    public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody PasswordChangeRequest request) {
+        userService.changeMyPassword(request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")

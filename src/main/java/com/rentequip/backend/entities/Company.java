@@ -77,6 +77,16 @@ public class Company extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    /** Public URL of the company logo; null shows the initials. */
+    @Size(max = 500)
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
+
+    /** Public "about us" text, shown to renters next to the company's machines. */
+    @Size(max = 1000)
+    @Column(length = 1000)
+    private String description;
+
     @Column(nullable = false)
     private boolean active = true;
 

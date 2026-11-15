@@ -19,7 +19,7 @@ class AssistantGuardrailsTest {
     private final AssistantGuard guard = new AssistantGuard();
     private final List<EquipmentSummaryResponse> catalog = List.of(new EquipmentSummaryResponse(1L,
             "Minicargador Bobcat 5650", "Bobcat", "5650", new BigDecimal("520.00"), "PEN", null, "Arequipa",
-            null, null, null, 1L, "Equipos del Sur", false));
+            null, null, null, 1L, "Equipos del Sur", false, null));
 
     @Test
     void answersNoiseSmallTalkAndInjectionLocally() {

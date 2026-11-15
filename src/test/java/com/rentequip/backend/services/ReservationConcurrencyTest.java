@@ -12,6 +12,7 @@ import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.repositories.HandoverPhotoRepository;
 import com.rentequip.backend.repositories.PaymentRepository;
+import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +61,9 @@ class ReservationConcurrencyTest {
     @Autowired
     private HandoverPhotoRepository handoverPhotoRepository;
 
+    @Autowired
+    private PurchaseRequestRepository purchaseRequestRepository;
+
     private Long equipmentId;
     private Long ownerId;
     private Long firstRenterId;
@@ -67,6 +71,7 @@ class ReservationConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        purchaseRequestRepository.deleteAll();
         handoverPhotoRepository.deleteAll();
         paymentRepository.deleteAll();
         reservationRepository.deleteAll();

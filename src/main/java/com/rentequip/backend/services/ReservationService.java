@@ -215,6 +215,9 @@ public class ReservationService {
 
     private void synchronizeEquipmentStatus(Reservation reservation, ReservationStatus status) {
         Equipment equipment = reservation.getEquipment();
+        if (equipment.getStatus() == EquipmentStatus.SOLD) {
+            return; // a sold machine keeps its final status whatever happens to the rental it came from
+        }
         if (status == ReservationStatus.IN_PROGRESS) {
             equipment.setStatus(EquipmentStatus.RENTED);
         } else if (statusPolicy.releasesCalendar(status) && equipment.getStatus() == EquipmentStatus.RENTED) {
@@ -271,7 +274,7 @@ public class ReservationService {
 
     private void validateEquipmentIsRentable(Equipment equipment) {
         EquipmentStatus status = equipment.getStatus();
-        if (status == EquipmentStatus.MAINTENANCE || status == EquipmentStatus.INACTIVE) {
+        if (status == EquipmentStatus.MAINTENANCE || status == EquipmentStatus.INACTIVE || status == EquipmentStatus.SOLD) {
             throw EquipmentUnavailableException.of(equipment.getId(), status);
         }
     }
