@@ -94,6 +94,23 @@ AMI_ID="$(aws ec2 describe-images --owners amazon \
 [ -n "$AMI_ID" ] && [ "$AMI_ID" != "None" ] || die "No se pudo resolver la AMI"
 echo "AMI: $AMI_ID"
 
+# --------------------------------------------------------------------- 3b. IP fija
+# Una Elastic IP conserva la direccion aunque el laboratorio apague y vuelva a encender la instancia,
+# asi la URL de la API, y con ella la web y la app movil, no cambia entre sesiones. Se reutiliza la
+# misma en cada despliegue (se busca por su etiqueta) y se reasocia a la instancia nueva.
+say "Reservando la IP fija (Elastic IP)"
+EIP_ALLOC="$(aws ec2 describe-addresses --filters "Name=tag:Name,Values=${TAG}-eip" \
+  --query 'Addresses[0].AllocationId' --output text --region "$REGION")"
+if [ -z "$EIP_ALLOC" ] || [ "$EIP_ALLOC" = "None" ]; then
+  EIP_ALLOC="$(aws ec2 allocate-address --domain vpc \
+    --tag-specifications "ResourceType=elastic-ip,Tags=[{Key=Name,Value=${TAG}-eip}]" \
+    --query 'AllocationId' --output text --region "$REGION")"
+fi
+PUBLIC_IP="$(aws ec2 describe-addresses --allocation-ids "$EIP_ALLOC" \
+  --query 'Addresses[0].PublicIp' --output text --region "$REGION")"
+DOMAIN="$(echo "$PUBLIC_IP" | tr . -).sslip.io"
+echo "IP fija: $PUBLIC_IP ($DOMAIN)"
+
 JDBC_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
 USER_DATA="$(cat <<EOF
@@ -143,10 +160,9 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now rentequip
 
-# HTTPS con Caddy. El dominio sale de la IP publica que da el servicio de metadatos (IMDSv2).
-IMDS_TOKEN=\$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
-PUBLIC_IP=\$(curl -sS -H "X-aws-ec2-metadata-token: \$IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
-DOMAIN="\$(echo "\$PUBLIC_IP" | tr . -).sslip.io"
+# HTTPS con Caddy para el dominio de la IP fija. Caddy reintenta el certificado hasta que la
+# Elastic IP queda asociada a esta instancia.
+DOMAIN="$DOMAIN"
 
 curl -fsSL -o /usr/local/bin/caddy "https://caddyserver.com/api/download?os=linux&arch=amd64"
 chmod +x /usr/local/bin/caddy
@@ -191,10 +207,9 @@ INSTANCE_ID="$(aws ec2 run-instances \
 echo "Instancia: $INSTANCE_ID"
 
 aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
-PUBLIC_IP="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
-  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text --region "$REGION")"
-echo "IP publica: $PUBLIC_IP"
-DOMAIN="$(echo "$PUBLIC_IP" | tr . -).sslip.io"
+aws ec2 associate-address --allocation-id "$EIP_ALLOC" --instance-id "$INSTANCE_ID" \
+  --allow-reassociation --region "$REGION" >/dev/null
+echo "IP publica: $PUBLIC_IP (fija, asociada a $INSTANCE_ID)"
 BASE="https://${DOMAIN}"
 
 # --------------------------------------------------------------------- 4. esperar a la app
@@ -217,8 +232,9 @@ aws s3 rm "s3://$BUCKET/app.jar" --region "$REGION" >/dev/null 2>&1 || true
 aws s3 rb "s3://$BUCKET" --region "$REGION" >/dev/null 2>&1 || true
 
 say "Actualizando el README"
-sed -i "s|^\*\*Deployment:\*\* .*|**Deployment:** ${BASE}/swagger-ui.html|" README.md
-grep -n "Deployment:" README.md
+# Sustituye la URL de cualquier despliegue anterior (siempre un <ip-con-guiones>.sslip.io).
+sed -i -E "s#https://[0-9]+-[0-9]+-[0-9]+-[0-9]+\.sslip\.io#${BASE}#g" README.md
+grep -n "$DOMAIN" README.md || echo "El README no tenia URL de despliegue que actualizar"
 
 cat <<RESUMEN
 
