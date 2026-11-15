@@ -15,7 +15,7 @@
 | Rojas Llanos, Sergio | 202410758 |
 
 **Repositorio:** https://github.com/sergio453LOL/BackendRentequipV2<br>
-**API en vivo:** http://3.237.198.235:8080/swagger-ui/index.html#/<br>
+**API en vivo:** https://107-22-25-174.sslip.io/swagger-ui.html<br>
 **Evidencias de Deployment AWS y Swagger:** https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD
 
 ---
@@ -233,7 +233,7 @@ Instancia EC2 `t3.small` (Amazon Linux 2023) contra PostgreSQL en RDS. La base *
 
 | Recurso | Enlace |
 |---|---|
-| API en vivo (Swagger UI) | http://3.237.198.235:8080/swagger-ui/index.html#/ |
+| API en vivo (Swagger UI) | https://107-22-25-174.sslip.io/swagger-ui.html |
 | Health check | http://3.237.198.235:8080/actuator/health |
 | Especificación OpenAPI | http://3.237.198.235:8080/v3/api-docs |
 | **Evidencias de Deployment AWS y Swagger** | [Carpeta en Google Drive](https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD) |
