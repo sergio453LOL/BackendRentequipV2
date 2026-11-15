@@ -1,5 +1,6 @@
 package com.rentequip.backend.dtos.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -72,6 +73,16 @@ public record EquipmentCreateRequest(
         Long ownerCompanyId,
 
         /** Optional; absent means the rate does not include an operator. */
-        Boolean operatorIncluded
+        Boolean operatorIncluded,
+
+        @Min(0) @Max(200000)
+        Integer usageHours,
+
+        @Size(max = 500)
+        @Pattern(regexp = "^(https?://.+)?$", message = "El video debe ser un enlace http(s)")
+        String videoUrl,
+
+        @Valid
+        OperatorProfileRequest operator
 ) {
 }

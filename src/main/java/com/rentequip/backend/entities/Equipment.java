@@ -107,6 +107,32 @@ public class Equipment extends BaseEntity {
     @Column(name = "operator_included", nullable = false, columnDefinition = "boolean default false")
     private boolean operatorIncluded = false;
 
+    /** Hour meter reading: with the year, what a renter checks first about a machine's wear. */
+    @Min(0)
+    @Column(name = "usage_hours")
+    private Integer usageHours;
+
+    /** Short demo clip (YouTube, Vimeo or a direct .mp4 link). */
+    @Size(max = 500)
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
+    /** Operator sheet, filled when the rate includes one. */
+    @Size(max = 120)
+    @Column(name = "operator_name", length = 120)
+    private String operatorName;
+
+    @Size(max = 60)
+    @Column(name = "operator_license", length = 60)
+    private String operatorLicense;
+
+    @Column(name = "operator_experience_years")
+    private Integer operatorExperienceYears;
+
+    @Size(max = 500)
+    @Column(name = "operator_certifications", length = 500)
+    private String operatorCertifications;
+
     /** Price to buy the machine outright; null means it is only for rent. */
     @DecimalMin("0.01")
     @Digits(integer = 10, fraction = 2)

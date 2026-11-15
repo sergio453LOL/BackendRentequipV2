@@ -106,10 +106,17 @@ public ResponseEntity<EntityModel<EquipmentResponse>> findById(@PathVariable Lon
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long excludeOwnerId,
             @RequestParam(defaultValue = "NEAREST") CatalogSort sort,
+            @RequestParam(required = false) @Size(max = 80) String brand,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(equipmentService.searchCatalog(latitude, longitude, radiusKm, q, categoryId, categoryIds,
-                city, maxDailyRate, startDate, endDate, excludeOwnerId, sort, page, size));
+                city, maxDailyRate, startDate, endDate, excludeOwnerId, sort, brand, page, size));
+    }
+
+    /** Brands with machines for rent, for the catalogue filter. Public like the search. */
+    @GetMapping("/brands")
+    public ResponseEntity<List<String>> findBrands() {
+        return ResponseEntity.ok(equipmentService.findAvailableBrands());
     }
 
     @GetMapping("/{id}/reservations")

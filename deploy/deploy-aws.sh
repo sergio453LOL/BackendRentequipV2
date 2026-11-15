@@ -18,7 +18,11 @@
 #   3c. (opcional) export DEMO_DATA_ENABLED=true DEMO_PASSWORD='...'  # catálogo de demostración
 #   3d. (opcional) export TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_WHATSAPP_FROM=+1...  # WhatsApp
 #   3e. (opcional) export WHATSAPP_EMPRESAS_TOKEN=...  # WhatsApp por WhatsApp Empresas (reemplaza a Twilio)
-#   3f. (opcional) export GEMINI_API_KEY=...  # asistente IA; sin ella responde el buscador local
+#   3f. (opcional) export SMS_GATEWAY_URL=https://... SMS_GATEWAY_TOKEN=... SMS_GATEWAY_SIMS=1  # comprobantes y códigos por SMS
+#   3g. (opcional) export MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=... MAIL_PASSWORD=... MAIL_FROM=...
+#       MAIL_SMTP_AUTH=true MAIL_SMTP_TLS=true  # correos (avisos, comprobantes, códigos de verificación)
+#   3h. (opcional) export IDENTITY_API_TOKEN=...  # SUNAT/RENIEC (decolecta.com): RUC, DNI e insignia de empresa verificada
+#   3i. (opcional) export GEMINI_API_KEY=...  # asistente IA; sin ella responde el buscador local
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -113,6 +117,9 @@ echo "IP fija: $PUBLIC_IP ($DOMAIN)"
 
 JDBC_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
+# Sin un SMTP real los correos se apagan; con él salen los avisos y los códigos de verificación por correo.
+if [ -n "${MAIL_HOST:-}" ] && [ -n "${MAIL_PASSWORD:-}" ]; then MAIL_ENABLED=true; else MAIL_ENABLED=false; fi
+
 USER_DATA="$(cat <<EOF
 #!/bin/bash
 set -x
@@ -137,7 +144,14 @@ Environment="DB_URL=$JDBC_URL"
 Environment="DB_USERNAME=$DB_USER"
 Environment="DB_PASSWORD=$DB_PASSWORD"
 Environment="JWT_SECRET=$JWT_SECRET"
-Environment="MAIL_ENABLED=false"
+Environment="MAIL_ENABLED=$MAIL_ENABLED"
+Environment="MAIL_HOST=${MAIL_HOST:-localhost}"
+Environment="MAIL_PORT=${MAIL_PORT:-587}"
+Environment="MAIL_USERNAME=${MAIL_USERNAME:-}"
+Environment="MAIL_PASSWORD=${MAIL_PASSWORD:-}"
+Environment="MAIL_FROM=${MAIL_FROM:-no-reply@rentequip.pe}"
+Environment="MAIL_SMTP_AUTH=${MAIL_SMTP_AUTH:-true}"
+Environment="MAIL_SMTP_TLS=${MAIL_SMTP_TLS:-true}"
 Environment="PORT=$APP_PORT"
 Environment="UPLOADS_DIR=/opt/rentequip/uploads"
 Environment="CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS"
@@ -150,6 +164,10 @@ Environment="TWILIO_API_KEY_SECRET=${TWILIO_API_KEY_SECRET:-}"
 Environment="TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}"
 Environment="TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM:-}"
 Environment="WHATSAPP_EMPRESAS_TOKEN=${WHATSAPP_EMPRESAS_TOKEN:-}"
+Environment="SMS_GATEWAY_URL=${SMS_GATEWAY_URL:-}"
+Environment="SMS_GATEWAY_TOKEN=${SMS_GATEWAY_TOKEN:-}"
+Environment="SMS_GATEWAY_SIMS=${SMS_GATEWAY_SIMS:-}"
+Environment="IDENTITY_API_TOKEN=${IDENTITY_API_TOKEN:-}"
 Environment="GEMINI_API_KEY=${GEMINI_API_KEY:-}"
 Environment="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}"
 

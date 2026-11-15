@@ -23,6 +23,11 @@ public record EquipmentSummaryResponse(
         String ownerCompanyName,
         boolean operatorIncluded,
         /** Null when the machine is only for rent. */
-        BigDecimal salePrice
+        BigDecimal salePrice,
+        Integer manufactureYear,
+        Integer usageHours,
+        /** Kilometres from the visitor; null when the search had no visitor location. */
+        Double distanceKm,
+        boolean ownerCompanyVerified
 ) {
 }

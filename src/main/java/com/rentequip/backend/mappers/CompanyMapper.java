@@ -52,7 +52,10 @@ public class CompanyMapper {
                 company.getLogoUrl(),
                 company.getDescription(),
                 company.isActive(),
-                company.getCreatedAt()
+                company.getCreatedAt(),
+                company.isVerified(),
+                company.getVerifiedAt(),
+                company.getTaxStatus()
         );
     }
 }

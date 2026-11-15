@@ -23,8 +23,15 @@ public record ReservationCreateRequest(
         LocalDate endDate,
 
         @Size(max = 500)
-        String notes
+        String notes,
+
+        /** An accepted price offer for this machine: the reservation charges the agreed daily rate. */
+        Long offerId
 ) {
+
+    public ReservationCreateRequest(Long equipmentId, LocalDate startDate, LocalDate endDate, String notes) {
+        this(equipmentId, startDate, endDate, notes, null);
+    }
 
     @AssertTrue(message = "End date must be on or after start date")
     public boolean isDateRangeValid() {

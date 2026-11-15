@@ -36,6 +36,11 @@ public record EquipmentResponse(
         boolean operatorIncluded,
         /** Null when the machine is only for rent. */
         BigDecimal salePrice,
-        int rentCreditPercent
+        int rentCreditPercent,
+        Integer usageHours,
+        String videoUrl,
+        /** Null when no operator was described. */
+        OperatorProfileResponse operator,
+        boolean ownerCompanyVerified
 ) {
 }

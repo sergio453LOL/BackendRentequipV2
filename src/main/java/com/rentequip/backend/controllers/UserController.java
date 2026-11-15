@@ -2,9 +2,14 @@ package com.rentequip.backend.controllers;
 
 import com.rentequip.backend.dtos.request.PasswordChangeRequest;
 import com.rentequip.backend.dtos.request.ProfileUpdateRequest;
+import com.rentequip.backend.dtos.request.TwoFactorDisableRequest;
+import com.rentequip.backend.dtos.request.TwoFactorSetupRequest;
+import com.rentequip.backend.dtos.request.TwoFactorVerifyRequest;
+import com.rentequip.backend.dtos.response.TwoFactorChallengeResponse;
 import com.rentequip.backend.dtos.request.UserCreateRequest;
 import com.rentequip.backend.dtos.request.UserUpdateRequest;
 import com.rentequip.backend.dtos.response.UserResponse;
+import com.rentequip.backend.services.TwoFactorService;
 import com.rentequip.backend.services.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -31,6 +36,7 @@ import java.net.URI;
 public class UserController {
 
     private final UserService userService;
+    private final TwoFactorService twoFactorService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -56,6 +62,23 @@ public class UserController {
     public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody PasswordChangeRequest request) {
         userService.changeMyPassword(request);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Step 1 of turning on the two-step verification: a code goes to the chosen channel. */
+    @PostMapping("/me/two-factor/setup")
+    public ResponseEntity<TwoFactorChallengeResponse> startTwoFactorSetup(@Valid @RequestBody TwoFactorSetupRequest request) {
+        return ResponseEntity.ok(twoFactorService.startSetup(request));
+    }
+
+    /** Step 2: the code proves the channel works, and the protection is on from the next login. */
+    @PostMapping("/me/two-factor/confirm")
+    public ResponseEntity<UserResponse> confirmTwoFactor(@Valid @RequestBody TwoFactorVerifyRequest request) {
+        return ResponseEntity.ok(twoFactorService.confirmSetup(request));
+    }
+
+    @PostMapping("/me/two-factor/disable")
+    public ResponseEntity<UserResponse> disableTwoFactor(@Valid @RequestBody TwoFactorDisableRequest request) {
+        return ResponseEntity.ok(twoFactorService.disable(request));
     }
 
     @GetMapping("/{id}")

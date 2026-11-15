@@ -16,6 +16,9 @@ public record CompanyResponse(
         String logoUrl,
         String description,
         boolean active,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean verified,
+        LocalDateTime verifiedAt,
+        String taxStatus
 ) {
 }

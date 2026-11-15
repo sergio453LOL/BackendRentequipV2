@@ -61,6 +61,7 @@ public class ReservationService {
     private final ReservationMapper reservationMapper;
     private final ReservationStatusPolicy statusPolicy;
     private final PaymentService paymentService;
+    private final OfferService offerService;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservationResponse create(ReservationCreateRequest request) {
@@ -73,8 +74,11 @@ public class ReservationService {
         validateRenterIsNotOwner(equipment, renter);
         validateNoOverlap(equipment.getId(), request.startDate(), request.endDate());
 
-        Reservation reservation = reservationRepository.save(
-                reservationMapper.toEntity(request, equipment, renter));
+        Reservation draft = reservationMapper.toEntity(request, equipment, renter);
+        if (request.offerId() != null) {
+            draft.applyNegotiatedRate(offerService.consumeForReservation(request.offerId(), equipment.getId(), renter.getId()));
+        }
+        Reservation reservation = reservationRepository.save(draft);
         log.info("Reservation {} created for equipment {} by company {} ({} to {})",
                 reservation.getId(), equipment.getId(), renter.getId(),
                 reservation.getStartDate(), reservation.getEndDate());

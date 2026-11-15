@@ -3,7 +3,9 @@ package com.rentequip.backend.services;
 import com.rentequip.backend.dtos.request.LoginRequest;
 import com.rentequip.backend.dtos.request.RefreshTokenRequest;
 import com.rentequip.backend.dtos.request.RegisterRequest;
+import com.rentequip.backend.dtos.request.TwoFactorVerifyRequest;
 import com.rentequip.backend.dtos.response.AuthResponse;
+import com.rentequip.backend.dtos.response.TwoFactorChallengeResponse;
 import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.User;
 import com.rentequip.backend.enums.UserRole;
@@ -36,6 +38,12 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TwoFactorService twoFactorService;
+    private final CompanyVerificationService companyVerificationService;
+
+    /** A login ends either with the tokens or, when the two-step verification is on, with a code sent. */
+    public record LoginOutcome(AuthResponse tokens, TwoFactorChallengeResponse challenge) {
+    }
 
     /**
      * Creates the company and its first administrator atomically: if the user cannot be persisted the
@@ -47,13 +55,32 @@ public class AuthService {
             throw DuplicateResourceException.of("User", "email", request.email());
         }
         Company company = companyService.createEntity(request.company());
+        companyVerificationService.verifyQuietly(company);
         User administrator = userRepository.save(buildAdministrator(request, company));
         return issueTokens(CompanyUserDetails.from(administrator), company.getName());
     }
 
-    @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest request) {
+    @Transactional
+    public LoginOutcome login(LoginRequest request) {
         CompanyUserDetails principal = authenticate(request);
+        User user = userRepository.findById(principal.userId())
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        if (user.getTwoFactorChannel() != null) {
+            return new LoginOutcome(null, twoFactorService.startLogin(user));
+        }
+        return new LoginOutcome(issueTokens(principal, companyNameOf(principal)), null);
+    }
+
+    /**
+     * Second step of a protected login. Not transactional on purpose: a wrong code must still count as an
+     * attempt, and an outer transaction would roll that back together with the failure.
+     */
+    public AuthResponse verifyLogin(TwoFactorVerifyRequest request) {
+        User user = twoFactorService.verifyLogin(request);
+        CompanyUserDetails principal = userDetailsService.loadUserByUsername(user.getEmail());
+        if (!principal.isEnabled()) {
+            throw new UnauthorizedException("This account has been disabled");
+        }
         return issueTokens(principal, companyNameOf(principal));
     }
 

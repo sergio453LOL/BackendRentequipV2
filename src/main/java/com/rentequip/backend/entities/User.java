@@ -1,5 +1,6 @@
 package com.rentequip.backend.entities;
 
+import com.rentequip.backend.enums.TwoFactorChannel;
 import com.rentequip.backend.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -64,6 +65,11 @@ public class User extends BaseEntity {
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    /** Where the sign-in code goes; null means the two-step verification is off. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "two_factor_channel", length = 10)
+    private TwoFactorChannel twoFactorChannel;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

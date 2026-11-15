@@ -56,7 +56,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/equipment/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/equipment/search", "/api/v1/equipment/brands").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exchange-rate").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/identity/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/equipment-categories/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()

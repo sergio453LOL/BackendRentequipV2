@@ -141,13 +141,33 @@ public class EquipmentService {
                                                                  BigDecimal maxDailyRate, LocalDate startDate,
                                                                  LocalDate endDate, Long excludedOwnerId,
                                                                  CatalogSort sort, int page, int size) {
+        return searchCatalog(latitude, longitude, radiusKm, query, categoryId, categoryIds, city, maxDailyRate,
+                startDate, endDate, excludedOwnerId, sort, null, page, size);
+    }
+
+    /**
+     * Same search narrowed to one brand. When the visitor shared their location each result carries how
+     * many kilometres away it is.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<EquipmentSummaryResponse> searchCatalog(BigDecimal latitude, BigDecimal longitude,
+                                                                 Double radiusKm, String query, Long categoryId,
+                                                                 Collection<Long> categoryIds, String city,
+                                                                 BigDecimal maxDailyRate, LocalDate startDate,
+                                                                 LocalDate endDate, Long excludedOwnerId,
+                                                                 CatalogSort sort, String brand, int page, int size) {
         boolean hasLocation = latitude != null && longitude != null;
         double effectiveRadius = radiusKm != null
                 ? radiusKm
                 : hasLocation ? DEFAULT_SEARCH_RADIUS_KM : MAX_SEARCH_RADIUS_KM;
         return runSearch(hasLocation ? latitude : DEFAULT_LATITUDE, hasLocation ? longitude : DEFAULT_LONGITUDE,
-                effectiveRadius, query, categoryFilter(categoryId, categoryIds), city, maxDailyRate, startDate,
-                endDate, excludedOwnerId, sort, page, size);
+                effectiveRadius, query, categoryFilter(categoryId, categoryIds), city, normalize(brand), maxDailyRate,
+                startDate, endDate, excludedOwnerId, sort, hasLocation, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> findAvailableBrands() {
+        return equipmentRepository.findAvailableBrands();
     }
 
     /**
@@ -160,16 +180,16 @@ public class EquipmentService {
                                                           BigDecimal maxDailyRate, LocalDate startDate,
                                                           LocalDate endDate, Long excludedOwnerId,
                                                           int page, int size) {
-        return runSearch(latitude, longitude, radiusKm, null, categoryFilter(categoryId, null), city, maxDailyRate,
-                startDate, endDate, excludedOwnerId, CatalogSort.NEAREST, page, size);
+        return runSearch(latitude, longitude, radiusKm, null, categoryFilter(categoryId, null), city, null, maxDailyRate,
+                startDate, endDate, excludedOwnerId, CatalogSort.NEAREST, true, page, size);
     }
 
     private PageResponse<EquipmentSummaryResponse> runSearch(BigDecimal latitude, BigDecimal longitude,
                                                              double radiusKm, String query, Set<Long> categoryIds,
-                                                             String city, BigDecimal maxDailyRate,
+                                                             String city, String brand, BigDecimal maxDailyRate,
                                                              LocalDate startDate, LocalDate endDate,
                                                              Long excludedOwnerId, CatalogSort sort,
-                                                             int page, int size) {
+                                                             boolean withDistance, int page, int size) {
         validateRadius(radiusKm);
         validateSearchDates(startDate, endDate);
         categoryIds.forEach(this::validateCategoryExists);
@@ -179,10 +199,26 @@ public class EquipmentService {
         // Same for dates: PostgreSQL cannot type a null date parameter, so the window travels as a flag.
         boolean anyDates = startDate != null && endDate != null;
         Page<Equipment> results = equipmentRepository.searchNearby(latitude, longitude, radiusKm, anyCategory,
-                anyCategory ? categoryIds : Set.of(-1L), normalize(city), toContainsPattern(query), maxDailyRate,
+                anyCategory ? categoryIds : Set.of(-1L), normalize(city), brand, toContainsPattern(query), maxDailyRate,
                 anyDates, anyDates ? startDate : NO_DATE, anyDates ? endDate : NO_DATE, excludedOwnerId,
                 (sort == null ? CatalogSort.NEAREST : sort).name(), PageRequest.of(page, size));
-        return PageResponse.from(results, equipmentMapper::toSummary);
+        return PageResponse.from(results, equipment -> equipmentMapper.toSummary(equipment,
+                withDistance ? distanceKm(latitude, longitude, equipment) : null));
+    }
+
+    /** Great-circle distance in kilometres, rounded to one decimal, as the card shows it. */
+    static Double distanceKm(BigDecimal latitude, BigDecimal longitude, Equipment equipment) {
+        if (equipment.getLatitude() == null || equipment.getLongitude() == null) {
+            return null;
+        }
+        double lat1 = Math.toRadians(latitude.doubleValue());
+        double lat2 = Math.toRadians(equipment.getLatitude().doubleValue());
+        double deltaLat = lat2 - lat1;
+        double deltaLng = Math.toRadians(equipment.getLongitude().doubleValue() - longitude.doubleValue());
+        double a = Math.pow(Math.sin(deltaLat / 2), 2)
+                + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLng / 2), 2);
+        double km = 2 * 6371.0 * Math.asin(Math.min(1.0, Math.sqrt(a)));
+        return Math.round(km * 10) / 10.0;
     }
 
     /**
