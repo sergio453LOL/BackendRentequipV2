@@ -13,6 +13,8 @@ public record CompanyResponse(
         String city,
         BigDecimal latitude,
         BigDecimal longitude,
+        String logoUrl,
+        String description,
         boolean active,
         LocalDateTime createdAt
 ) {

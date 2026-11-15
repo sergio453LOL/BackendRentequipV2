@@ -53,6 +53,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                       @Param("startDate") LocalDate startDate,
                                       @Param("endDate") LocalDate endDate);
 
+    /** Other reservations still holding the machine (pending, confirmed or under way): a sale must wait for them. */
+    @Query("SELECT count(r) > 0 FROM Reservation r WHERE r.equipment.id = :equipmentId AND r.id <> :excludedId"
+            + " AND r.status IN " + BLOCKING_STATUSES)
+    boolean existsOtherBlocking(@Param("equipmentId") Long equipmentId, @Param("excludedId") Long excludedId);
+
     @Query("SELECT count(r) > 0 FROM Reservation r WHERE " + OVERLAP_PREDICATE)
     boolean existsOverlapping(@Param("equipmentId") Long equipmentId,
                               @Param("startDate") LocalDate startDate,

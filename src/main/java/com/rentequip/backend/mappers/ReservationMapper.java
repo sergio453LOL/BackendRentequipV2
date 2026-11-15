@@ -6,6 +6,7 @@ import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.Reservation;
 import com.rentequip.backend.services.PaymentService;
+import com.rentequip.backend.enums.EquipmentStatus;
 import com.rentequip.backend.enums.ReservationStatus;
 import org.springframework.stereotype.Component;
 
@@ -43,7 +44,8 @@ public class ReservationMapper {
                 reservation.getNotes(),
                 PaymentService.paymentStatusOf(reservation),
                 reservation.getCreatedAt(),
-                reservation.getReview() != null
+                reservation.getReview() != null,
+                reservation.getEquipment().getStatus() == EquipmentStatus.SOLD ? null : reservation.getEquipment().getSalePrice()
         );
     }
 }

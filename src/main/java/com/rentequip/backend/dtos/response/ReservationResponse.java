@@ -26,6 +26,8 @@ public record ReservationResponse(
         ReservationPaymentStatus paymentStatus,
         LocalDateTime createdAt, 
         /** The renter already left a review for this reservation. */ 
-        boolean reviewed
+        boolean reviewed,
+        /** Sale price of the machine when its owner offers it for sale (rent with an option to buy); else null. */
+        BigDecimal equipmentSalePrice
 ) {
 }

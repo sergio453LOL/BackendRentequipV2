@@ -30,7 +30,12 @@ public record EquipmentResponse(
         Set<String> categories,
         Long ownerCompanyId,
         String ownerCompanyName,
+        String ownerCompanyLogoUrl,
+        String ownerCompanyDescription,
         LocalDateTime createdAt,
-        boolean operatorIncluded
+        boolean operatorIncluded,
+        /** Null when the machine is only for rent. */
+        BigDecimal salePrice,
+        int rentCreditPercent
 ) {
 }

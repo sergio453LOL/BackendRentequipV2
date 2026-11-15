@@ -10,6 +10,7 @@ import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.repositories.HandoverPhotoRepository;
 import com.rentequip.backend.repositories.PaymentRepository;
+import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
 import com.rentequip.backend.services.ReservationService;
@@ -50,6 +51,9 @@ class ReservationEventsTest {
     private ReservationRepository reservationRepository;
 
     @Autowired
+    private PurchaseRequestRepository purchaseRequestRepository;
+
+    @Autowired
     private PaymentRepository paymentRepository;
 
     @Autowired
@@ -64,6 +68,7 @@ class ReservationEventsTest {
 
     @BeforeEach
     void setUp() {
+        purchaseRequestRepository.deleteAll();
         handoverPhotoRepository.deleteAll();
         paymentRepository.deleteAll();
         reservationRepository.deleteAll();

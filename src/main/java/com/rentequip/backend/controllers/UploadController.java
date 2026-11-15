@@ -41,6 +41,12 @@ public class UploadController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url));
     }
 
+    /** Uploads a profile photo or company logo; any signed-in role may change its own picture. */
+    @PostMapping(path = "/api/v1/uploads/profile-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadProfileImage(@RequestParam("file") MultipartFile file) {
+        return uploadImage(file);
+    }
+
     /** Photos of the demo catalogue, bundled in the jar (see demo-images/CREDITS.md for their authors). */
     @GetMapping("/demo-images/{name}")
     public ResponseEntity<Resource> serveDemoImage(@PathVariable String name) {

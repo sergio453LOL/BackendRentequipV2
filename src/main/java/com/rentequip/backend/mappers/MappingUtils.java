@@ -12,4 +12,9 @@ public final class MappingUtils {
             setter.accept(value);
         }
     }
+
+    /** An empty string from a form means "remove the value". */
+    public static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
 }

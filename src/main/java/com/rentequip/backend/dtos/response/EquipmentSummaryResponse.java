@@ -21,6 +21,8 @@ public record EquipmentSummaryResponse(
         String primaryImageUrl,
         Long ownerCompanyId,
         String ownerCompanyName,
-        boolean operatorIncluded
+        boolean operatorIncluded,
+        /** Null when the machine is only for rent. */
+        BigDecimal salePrice
 ) {
 }

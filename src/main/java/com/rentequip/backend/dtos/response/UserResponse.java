@@ -10,6 +10,7 @@ public record UserResponse(
         String lastName,
         String email,
         String phone,
+        String avatarUrl,
         UserRole role,
         boolean enabled,
         Long companyId,
