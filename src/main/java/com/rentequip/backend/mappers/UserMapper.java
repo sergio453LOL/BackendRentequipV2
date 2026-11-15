@@ -56,7 +56,8 @@ public class UserMapper {
                 user.isEnabled(),
                 user.getCompany().getId(),
                 user.getCompany().getName(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getTwoFactorChannel()
         );
     }
 }

@@ -27,4 +27,14 @@ class ReceiptPhoneTest {
         assertThrows(InvalidOperationException.class, () -> ReceiptService.toE164("  "));
         assertThrows(InvalidOperationException.class, () -> ReceiptService.toE164("014567890"));
     }
+
+    @Test
+    void theSmsTextIsPlainAscii() {
+        String text = ReceiptService.smsText(new ReceiptService.ReceiptSummary("RE-000012", "Constructora Andina",
+                "Retroexcavadora 416F", "Del 01/12/2026 al 03/12/2026 (3 días)", "S/ 900.00", "S/ 500.00",
+                "S/ 1,400.00", "pi_123"));
+
+        assertThat(text).startsWith("RentEquip: comprobante RE-000012.").contains("(3 dias)").contains("Total S/ 1,400.00");
+        assertThat(text.chars().allMatch(c -> c < 128)).isTrue();
+    }
 }

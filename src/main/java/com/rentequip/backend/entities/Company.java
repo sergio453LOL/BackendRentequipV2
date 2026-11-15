@@ -90,6 +90,17 @@ public class Company extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    /** SUNAT reported the RUC as ACTIVO and HABIDO: the profile and the catalogue show the badge. */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean verified = false;
+
+    @Column(name = "verified_at")
+    private java.time.LocalDateTime verifiedAt;
+
+    /** SUNAT's last answer, e.g. "ACTIVO / HABIDO"; null until the RUC was checked. */
+    @Column(name = "tax_status", length = 60)
+    private String taxStatus;
+
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<User> users = new ArrayList<>();
 

@@ -17,6 +17,7 @@ import jakarta.persistence.QueryHint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -69,6 +70,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id IN :categoryIds))
               AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
+              AND (:brand IS NULL OR lower(e.brand) = lower(cast(:brand as string)))
               AND (:namePattern IS NULL
                    OR lower(e.name) LIKE cast(:namePattern as string)
                    OR lower(e.brand) LIKE cast(:namePattern as string)
@@ -96,6 +98,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id IN :categoryIds))
               AND (:city IS NULL OR lower(e.city) = lower(cast(:city as string)))
+              AND (:brand IS NULL OR lower(e.brand) = lower(cast(:brand as string)))
               AND (:namePattern IS NULL
                    OR lower(e.name) LIKE cast(:namePattern as string)
                    OR lower(e.brand) LIKE cast(:namePattern as string)
@@ -119,6 +122,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                                  @Param("anyCategory") boolean anyCategory,
                                  @Param("categoryIds") Collection<Long> categoryIds,
                                  @Param("city") String city,
+                                 @Param("brand") String brand,
                                  @Param("namePattern") String namePattern,
                                  @Param("maxDailyRate") BigDecimal maxDailyRate,
                                  @Param("anyDates") boolean anyDates,
@@ -135,4 +139,12 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     Optional<Double> findDistanceKm(@Param("id") Long id,
                                     @Param("latitude") BigDecimal latitude,
                                     @Param("longitude") BigDecimal longitude);
+
+    /** Brands with at least one machine for rent, for the catalogue's brand filter. */
+    @Query("""
+            SELECT DISTINCT e.brand FROM Equipment e
+            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE AND e.brand IS NOT NULL
+            ORDER BY e.brand
+            """)
+    List<String> findAvailableBrands();
 }

@@ -11,6 +11,7 @@ import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.hateoas.CompanyModelAssembler;
 import com.rentequip.backend.services.CompanyDashboardService;
 import com.rentequip.backend.services.CompanyService;
+import com.rentequip.backend.services.CompanyVerificationService;
 import com.rentequip.backend.services.EquipmentService;
 import com.rentequip.backend.services.UserService;
 import jakarta.validation.Valid;
@@ -48,6 +49,7 @@ public class CompanyController {
     private final CompanyDashboardService companyDashboardService;
     private final UserService userService;
     private final EquipmentService equipmentService;
+    private final CompanyVerificationService companyVerificationService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -57,6 +59,12 @@ public class CompanyController {
         CompanyResponse created = companyService.create(request);
         URI location = uriBuilder.path("/api/v1/companies/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(companyAssembler.toModel(created));
+    }
+
+    /** Checks the company's RUC with SUNAT and grants the verified badge when it is ACTIVO and HABIDO. */
+    @PostMapping("/me/verification")
+    public ResponseEntity<CompanyResponse> verifyMine() {
+        return ResponseEntity.ok(companyVerificationService.verifyMine());
     }
 
     @GetMapping("/me/dashboard")

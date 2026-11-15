@@ -1,11 +1,14 @@
 package com.rentequip.backend.mappers;
 
 import static com.rentequip.backend.mappers.MappingUtils.applyIfPresent;
+import static com.rentequip.backend.mappers.MappingUtils.blankToNull;
 
 import com.rentequip.backend.dtos.request.EquipmentCreateRequest;
 import com.rentequip.backend.dtos.request.EquipmentUpdateRequest;
 import com.rentequip.backend.dtos.response.EquipmentResponse;
+import com.rentequip.backend.dtos.request.OperatorProfileRequest;
 import com.rentequip.backend.dtos.response.EquipmentSummaryResponse;
+import com.rentequip.backend.dtos.response.OperatorProfileResponse;
 import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.EquipmentCategory;
@@ -44,6 +47,9 @@ public class EquipmentMapper {
         equipment.setLongitude(request.longitude());
         equipment.setOwner(owner);
         equipment.setOperatorIncluded(Boolean.TRUE.equals(request.operatorIncluded()));
+        equipment.setUsageHours(request.usageHours());
+        equipment.setVideoUrl(blankToNull(request.videoUrl()));
+        applyOperator(equipment, request.operator());
         if (request.imageUrls() != null) {
             equipment.getImageUrls().addAll(request.imageUrls());
         }
@@ -57,6 +63,13 @@ public class EquipmentMapper {
         applyLocation(equipment, request);
         applyIfPresent(request.status(), equipment::setStatus);
         applyIfPresent(request.operatorIncluded(), equipment::setOperatorIncluded);
+        applyIfPresent(request.usageHours(), equipment::setUsageHours);
+        if (request.videoUrl() != null) {
+            equipment.setVideoUrl(blankToNull(request.videoUrl()));
+        }
+        if (request.operator() != null) {
+            applyOperator(equipment, request.operator());
+        }
         if (request.imageUrls() != null) {
             equipment.getImageUrls().clear();
             equipment.getImageUrls().addAll(request.imageUrls());
@@ -95,11 +108,20 @@ public class EquipmentMapper {
                 equipment.getCreatedAt(),
                 equipment.isOperatorIncluded(),
                 equipment.getSalePrice(),
-                rentCreditPercentOf(equipment)
+                rentCreditPercentOf(equipment),
+                equipment.getUsageHours(),
+                equipment.getVideoUrl(),
+                operatorOf(equipment),
+                equipment.getOwner().isVerified()
         );
     }
 
     public EquipmentSummaryResponse toSummary(Equipment equipment) {
+        return toSummary(equipment, null);
+    }
+
+    /** {@code distanceKm} is how far the machine is from the visitor, when the search knew where they are. */
+    public EquipmentSummaryResponse toSummary(Equipment equipment, Double distanceKm) {
         return new EquipmentSummaryResponse(
                 equipment.getId(),
                 equipment.getName(),
@@ -115,8 +137,29 @@ public class EquipmentMapper {
                 equipment.getOwner().getId(),
                 equipment.getOwner().getName(),
                 equipment.isOperatorIncluded(),
-                equipment.getSalePrice()
+                equipment.getSalePrice(),
+                equipment.getManufactureYear(),
+                equipment.getUsageHours(),
+                distanceKm,
+                equipment.getOwner().isVerified()
         );
+    }
+
+    /** A blank name clears the whole sheet: an operator without a name tells the renter nothing. */
+    private static void applyOperator(Equipment equipment, OperatorProfileRequest operator) {
+        String name = operator == null ? null : blankToNull(operator.name());
+        equipment.setOperatorName(name == null ? null : name.trim());
+        equipment.setOperatorLicense(name == null ? null : blankToNull(operator.license()));
+        equipment.setOperatorExperienceYears(name == null ? null : operator.experienceYears());
+        equipment.setOperatorCertifications(name == null ? null : blankToNull(operator.certifications()));
+    }
+
+    private static OperatorProfileResponse operatorOf(Equipment equipment) {
+        if (equipment.getOperatorName() == null) {
+            return null;
+        }
+        return new OperatorProfileResponse(equipment.getOperatorName(), equipment.getOperatorLicense(),
+                equipment.getOperatorExperienceYears(), equipment.getOperatorCertifications());
     }
 
     public static int rentCreditPercentOf(Equipment equipment) {

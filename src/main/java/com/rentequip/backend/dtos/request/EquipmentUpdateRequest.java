@@ -1,6 +1,7 @@
 package com.rentequip.backend.dtos.request;
 
 import com.rentequip.backend.enums.EquipmentStatus;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -70,6 +71,16 @@ public record EquipmentUpdateRequest(
         @Size(min = 1)
         Set<@NotNull Long> categoryIds,
 
-        Boolean operatorIncluded
+        Boolean operatorIncluded,
+
+        @Min(0) @Max(200000)
+        Integer usageHours,
+
+        @Size(max = 500)
+        @Pattern(regexp = "^(https?://.+)?$", message = "El video debe ser un enlace http(s)")
+        String videoUrl,
+
+        @Valid
+        OperatorProfileRequest operator
 ) {
 }

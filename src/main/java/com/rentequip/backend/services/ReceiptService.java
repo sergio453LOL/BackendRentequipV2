@@ -10,6 +10,7 @@ import com.rentequip.backend.enums.ReservationPaymentStatus;
 import com.rentequip.backend.exceptions.ForbiddenOperationException;
 import com.rentequip.backend.exceptions.InvalidOperationException;
 import com.rentequip.backend.exceptions.ResourceNotFoundException;
+import com.rentequip.backend.notifications.SmsGatewayClient;
 import com.rentequip.backend.notifications.WhatsAppClient;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.repositories.UserRepository;
@@ -19,13 +20,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 
 /**
  * Sends the payment receipt of a paid reservation to the renter, on demand: by email to the user's
- * login address, or by WhatsApp to the phone registered for the user (or, if missing, for the company).
+ * login address, or by WhatsApp or SMS to the phone registered for the user (or, if missing, for the company).
  */
 @Service
 @RequiredArgsConstructor
@@ -43,6 +45,7 @@ public class ReceiptService {
     private final CurrentUser currentUser;
     private final EmailService emailService;
     private final WhatsAppClient whatsAppClient;
+    private final SmsGatewayClient smsGatewayClient;
 
     @Transactional(readOnly = true)
     public ReceiptDeliveryResponse send(Long reservationId, ReceiptChannel channel) {
@@ -66,12 +69,21 @@ public class ReceiptService {
                 yield new ReceiptDeliveryResponse(channel, maskEmail(user.getEmail()));
             }
             case WHATSAPP -> {
-                String phone = toE164(user.getPhone() != null && !user.getPhone().isBlank()
-                        ? user.getPhone() : reservation.getRenter().getPhone());
+                String phone = phoneOf(user, reservation);
                 whatsAppClient.send(phone, whatsAppText(receipt));
                 yield new ReceiptDeliveryResponse(channel, maskPhone(phone));
             }
+            case SMS -> {
+                String phone = phoneOf(user, reservation);
+                smsGatewayClient.send(phone, smsText(receipt));
+                yield new ReceiptDeliveryResponse(channel, maskPhone(phone));
+            }
         };
+    }
+
+    private static String phoneOf(User user, Reservation reservation) {
+        return toE164(user.getPhone() != null && !user.getPhone().isBlank()
+                ? user.getPhone() : reservation.getRenter().getPhone());
     }
 
     private ReceiptSummary summarize(Reservation reservation) {
@@ -108,6 +120,16 @@ public class ReceiptService {
         return text.append("\nGracias por alquilar con RentEquip.").toString();
     }
 
+    /**
+     * SMS has no formatting and accents switch it to a 70-character encoding, so the text is plain ASCII
+     * and carries only what identifies the payment.
+     */
+    static String smsText(ReceiptSummary receipt) {
+        String text = "RentEquip: comprobante %s. %s, %s. Total %s (alquiler %s + garantia %s).".formatted(
+                receipt.code(), receipt.equipmentName(), receipt.dates(), receipt.total(), receipt.rental(), receipt.deposit());
+        return Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+    }
+
     private static String money(BigDecimal amount, String currency) {
         String symbol = switch (currency) {
             case "PEN" -> "S/";
@@ -129,13 +151,13 @@ public class ReceiptService {
         throw new InvalidOperationException("El celular registrado no es un número válido: actualízalo en tu perfil");
     }
 
-    private static String maskEmail(String email) {
+    static String maskEmail(String email) {
         int at = email.indexOf('@');
         if (at <= 1) return email;
         return email.charAt(0) + "***" + email.substring(at).toLowerCase(Locale.ROOT);
     }
 
-    private static String maskPhone(String e164) {
+    static String maskPhone(String e164) {
         String lastThree = e164.substring(e164.length() - 3);
         return e164.startsWith("+51") ? "+51 9•• ••• " + lastThree : "•••" + lastThree;
     }

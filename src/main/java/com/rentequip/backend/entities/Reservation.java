@@ -124,6 +124,13 @@ public class Reservation extends BaseEntity {
         this.totalAmount = rentalAmount.add(securityDeposit);
     }
 
+    /** A negotiated price replaces the published one; the deposit stays the published one. */
+    public void applyNegotiatedRate(BigDecimal negotiatedDailyRate) {
+        this.dailyRate = negotiatedDailyRate;
+        this.rentalAmount = negotiatedDailyRate.multiply(BigDecimal.valueOf(totalDays));
+        this.totalAmount = rentalAmount.add(securityDeposit);
+    }
+
     public void addPayment(Payment payment) {
         payments.add(payment);
         payment.setReservation(this);
