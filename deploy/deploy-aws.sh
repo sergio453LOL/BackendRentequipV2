@@ -18,6 +18,7 @@
 #   3c. (opcional) export DEMO_DATA_ENABLED=true DEMO_PASSWORD='...'  # catálogo de demostración
 #   3d. (opcional) export TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_WHATSAPP_FROM=+1...  # WhatsApp
 #   3e. (opcional) export WHATSAPP_EMPRESAS_TOKEN=...  # WhatsApp por WhatsApp Empresas (reemplaza a Twilio)
+#   3f. (opcional) export GEMINI_API_KEY=...  # asistente IA; sin ella responde el buscador local
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -36,7 +37,7 @@ DB_NAME="${DB_NAME:-rentequip}"
 DB_USER="${DB_USER:-postgres}"
 
 JAR_LOCAL="target/backend-0.0.1-SNAPSHOT.jar"
-CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:*,https://*.vercel.app}"
+CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:*,https://*.vercel.app,https://sergio453lol.github.io}"
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 die() { printf '\n\033[31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
@@ -132,6 +133,8 @@ Environment="TWILIO_API_KEY_SECRET=${TWILIO_API_KEY_SECRET:-}"
 Environment="TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}"
 Environment="TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM:-}"
 Environment="WHATSAPP_EMPRESAS_TOKEN=${WHATSAPP_EMPRESAS_TOKEN:-}"
+Environment="GEMINI_API_KEY=${GEMINI_API_KEY:-}"
+Environment="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}"
 
 [Install]
 WantedBy=multi-user.target
