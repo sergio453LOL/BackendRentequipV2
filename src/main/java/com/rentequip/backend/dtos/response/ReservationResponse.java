@@ -24,6 +24,8 @@ public record ReservationResponse(
         ReservationStatus status,
         String notes,
         ReservationPaymentStatus paymentStatus,
-        LocalDateTime createdAt
+        LocalDateTime createdAt, 
+        /** The renter already left a review for this reservation. */ 
+        boolean reviewed
 ) {
 }

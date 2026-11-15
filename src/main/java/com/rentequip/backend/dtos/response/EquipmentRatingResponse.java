@@ -5,6 +5,7 @@ package com.rentequip.backend.dtos.response;
  */
 public record EquipmentRatingResponse(
         Long equipmentId,
-        double averageRating
+        double averageRating,
+        long reviewCount
 ) {
 }
