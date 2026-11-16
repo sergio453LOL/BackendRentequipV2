@@ -18,6 +18,7 @@
 **Repositorio frontend (web + móvil):** https://github.com/sergio453LOL/FrontendRentequipV2<br>
 **Web en vivo:** https://sergio453lol.github.io/FrontendRentequipV2/<br>
 **API en vivo:** https://184-197-5-219.sslip.io/swagger-ui.html<br>
+**APK Android:** https://expo.dev/artifacts/eas/MnWAGbeevg44SrgBwgFJ61MjeRuPOPlBRS3KMJDC3Xw.apk<br>
 **Evidencias de Deployment AWS y Swagger:** https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD
 
 ### Participación de los integrantes
@@ -322,7 +323,7 @@ Instancia EC2 `t3.small` (Amazon Linux 2023) con **Elastic IP** `184.197.5.219`,
 | API en vivo (Swagger UI) | https://184-197-5-219.sslip.io/swagger-ui.html |
 | Health check | https://184-197-5-219.sslip.io/actuator/health |
 | Especificación OpenAPI | https://184-197-5-219.sslip.io/v3/api-docs |
-| App móvil | Proyecto Expo `@sergiorojas/rentequip`, APK con EAS Build |
+| App móvil (APK Android) | https://expo.dev/artifacts/eas/MnWAGbeevg44SrgBwgFJ61MjeRuPOPlBRS3KMJDC3Xw.apk (proyecto Expo `@sergiorojas/rentequip`, EAS Build) |
 | **Evidencias de Deployment AWS y Swagger** | [Carpeta en Google Drive](https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD) |
 
 Verificado en producción: health `UP`, registro emitiendo access y refresh token, login, creación de recursos con token, enlaces `_links` en las respuestas y 401 sin token.
