@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
@@ -55,6 +56,7 @@ class PaymentServiceExceptionTest {
     @Mock private ReservationRepository reservationRepository;
     @Mock private PaymentMapper paymentMapper;
     @Mock private CurrentUser currentUser;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private PaymentService paymentService;
 

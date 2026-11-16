@@ -41,7 +41,14 @@ public class CompanyVerificationService {
             return;
         }
         try {
-            lookupClient.findRuc(company.getTaxId()).ifPresent(info -> apply(company, info));
+            lookupClient.findRuc(company.getTaxId()).ifPresent(info -> {
+                // The form locks the name SUNAT returns; enforcing it here keeps an edited request from
+                // registering a RUC under someone else's business name.
+                if (info.name() != null && info.name().length() >= 2) {
+                    company.setName(info.name().length() > 150 ? info.name().substring(0, 150) : info.name());
+                }
+                apply(company, info);
+            });
         } catch (RuntimeException e) {
             log.warn("Could not verify company {} with SUNAT: {}", company.getId(), e.getMessage());
         }

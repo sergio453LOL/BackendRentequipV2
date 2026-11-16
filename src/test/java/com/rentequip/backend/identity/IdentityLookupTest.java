@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,5 +97,60 @@ class IdentityLookupTest {
         assertThat(info.name()).isEqualTo("SUNAT");
         assertThat(info.department()).isEqualTo("LIMA");
         server.verify();
+    }
+
+    @Test
+    void readsApisperuAndTreatsADashAddressAsMissing() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        IdentityLookupClient client = new IdentityLookupClient(List.of(
+                IdentityLookupClient.provider(IdentityLookupClient.Kind.APISPERU, builder, BASE_URL, "tok-1")));
+        server.expect(requestTo(startsWith(BASE_URL + "/api/v1/ruc/10467793549")))
+                .andExpect(queryParam("token", "tok-1"))
+                .andRespond(withSuccess("""
+                        {"ruc":"10467793549","razonSocial":"FERIA VILA CARLOS ESTEBAN","nombreComercial":"-","telefonos":[],
+                         "estado":"ACTIVO","condicion":"HABIDO","direccion":"-","departamento":"LIMA","provincia":"LIMA",
+                         "distrito":"MIRAFLORES","ubigeo":"150122","capital":"LIMA"}""", MediaType.APPLICATION_JSON));
+
+        RucInfo info = client.findRuc("10467793549").orElseThrow();
+
+        assertThat(info.name()).isEqualTo("FERIA VILA CARLOS ESTEBAN");
+        assertThat(info.address()).isNull();
+        assertThat(info.type()).isEqualTo(RucValidator.RucType.NATURAL_PERSON);
+        server.verify();
+    }
+
+    @Test
+    void apisperuSaysNotFoundWithSuccessFalse() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        IdentityLookupClient client = new IdentityLookupClient(List.of(
+                IdentityLookupClient.provider(IdentityLookupClient.Kind.APISPERU, builder, BASE_URL, "tok-1")));
+        server.expect(requestTo(startsWith(BASE_URL + "/api/v1/dni/12345678")))
+                .andRespond(withSuccess("{\"success\":false,\"message\":\"No se encontraron resultados.\"}", MediaType.APPLICATION_JSON));
+
+        assertThat(client.findDni("12345678")).isEmpty();
+        server.verify();
+    }
+
+    @Test
+    void aFailingProviderFallsBackToTheNextOne() {
+        RestClient.Builder paidBuilder = RestClient.builder();
+        MockRestServiceServer paid = MockRestServiceServer.bindTo(paidBuilder).build();
+        RestClient.Builder freeBuilder = RestClient.builder();
+        MockRestServiceServer free = MockRestServiceServer.bindTo(freeBuilder).build();
+        IdentityLookupClient client = new IdentityLookupClient(List.of(
+                IdentityLookupClient.provider(IdentityLookupClient.Kind.APISPERU, paidBuilder, BASE_URL, "tok-1"),
+                IdentityLookupClient.provider(IdentityLookupClient.Kind.FREE, freeBuilder, BASE_URL, "")));
+        paid.expect(requestTo(startsWith(BASE_URL + "/api/v1/dni/46779354"))).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+        free.expect(requestTo(startsWith(BASE_URL + "/v1/dni")))
+                .andRespond(withSuccess("""
+                        {"nombres":"CARLOS ESTEBAN","apellidoPaterno":"FERIA","apellidoMaterno":"VILA"}""", MediaType.APPLICATION_JSON));
+
+        DniInfo info = client.findDni("46779354").orElseThrow();
+
+        assertThat(info.lastNames()).isEqualTo("FERIA VILA");
+        paid.verify();
+        free.verify();
     }
 }

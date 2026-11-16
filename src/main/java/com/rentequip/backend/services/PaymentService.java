@@ -8,6 +8,7 @@ import com.rentequip.backend.enums.PaymentStatus;
 import com.rentequip.backend.enums.PaymentType;
 import com.rentequip.backend.enums.ReservationPaymentStatus;
 import com.rentequip.backend.enums.ReservationStatus;
+import com.rentequip.backend.events.ReservationPaidEvent;
 import com.rentequip.backend.exceptions.ForbiddenOperationException;
 import com.rentequip.backend.exceptions.InvalidOperationException;
 import com.rentequip.backend.exceptions.PaymentDeclinedException;
@@ -23,6 +24,7 @@ import com.rentequip.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +51,7 @@ public class PaymentService {
     private final ReservationRepository reservationRepository;
     private final PaymentMapper paymentMapper;
     private final CurrentUser currentUser;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<PaymentResponse> pay(Long reservationId, PaymentRequest request) {
@@ -104,6 +107,7 @@ public class PaymentService {
                     PaymentType.SECURITY_DEPOSIT, PaymentStatus.AUTHORIZED, deposit.reference(), now));
         }
         log.info("Reservation {} paid by company {}", reservationId, actingCompanyId);
+        eventPublisher.publishEvent(new ReservationPaidEvent(reservationId, currentUser.requireUserId()));
         return paymentRepository.saveAll(reservation.getPayments()).stream().map(paymentMapper::toResponse).toList();
     }
 

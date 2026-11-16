@@ -16,6 +16,8 @@ import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.repositories.UserRepository;
 import com.rentequip.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,10 +30,13 @@ import java.util.Map;
 /**
  * Sends the payment receipt of a paid reservation to the renter, on demand: by email to the user's
  * login address, or by WhatsApp or SMS to the phone registered for the user (or, if missing, for the company).
+ * The email copy is also sent once, automatically, right after the payment.
  */
 @Service
 @RequiredArgsConstructor
 public class ReceiptService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReceiptService.class);
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -79,6 +84,23 @@ public class ReceiptService {
                 yield new ReceiptDeliveryResponse(channel, maskPhone(phone));
             }
         };
+    }
+
+    /**
+     * The automatic copy sent after checkout. Nobody is waiting on a screen for it, so a failure is
+     * logged and swallowed: the user can still resend it with the receipt buttons.
+     */
+    @Transactional(readOnly = true)
+    public void emailAfterPayment(Long reservationId, Long payerUserId) {
+        Reservation reservation = reservationRepository.findDetailedById(reservationId).orElse(null);
+        User payer = userRepository.findById(payerUserId).orElse(null);
+        if (reservation == null || payer == null) {
+            log.warn("Receipt for reservation {} not sent: reservation or user {} not found", reservationId, payerUserId);
+            return;
+        }
+        ReceiptSummary receipt = summarize(reservation);
+        emailService.send(payer.getEmail(), "Comprobante " + receipt.code() + " · RentEquip",
+                "payment-receipt", Map.of("receipt", receipt));
     }
 
     private static String phoneOf(User user, Reservation reservation) {
