@@ -20,6 +20,18 @@
 **API en vivo:** https://184-197-5-219.sslip.io/swagger-ui.html<br>
 **Evidencias de Deployment AWS y Swagger:** https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD
 
+### Participación de los integrantes
+
+Todos los integrantes aportaron al proyecto y cumplieron sus responsabilidades.
+
+| Integrante | Principales aportes | Participación |
+|---|---|:---:|
+| Ayala Vega, Valeria Isabel | Formato de respuestas y DTOs de `EquipmentResponse`; verificación de la colección de Postman contra la API; documentación del README | 100 % |
+| Cadenas Hidalgo, Anthony Darian | Verificación del envío de correos de extremo a extremo con Mailpit; documentación del README | 100 % |
+| Ramos Calderón, Mary Sofía | Workflow de CI con GitHub Actions (`ci.yml`); tablero de GitHub Projects con labels y milestone; documentación del README | 100 % |
+| Rodrigo Corzo, Ernesto | Reseñas con estrellas y comentarios (backend y web); refactor de `EquipmentController`; revisión del PR de eventos y correo | 100 % |
+| Rojas Llanos, Sergio | Backend (reservas con lock pesimista, seguridad JWT, eventos, pagos con Stripe, asistente IA), aplicación web, app móvil y deployment en AWS | 100 % |
+
 ---
 
 ## Índice
