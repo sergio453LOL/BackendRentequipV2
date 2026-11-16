@@ -49,9 +49,13 @@ die() { printf '\n\033[31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
 # --------------------------------------------------------------------- 0. requisitos
 say "Comprobando requisitos"
 command -v aws >/dev/null 2>&1 || die "La AWS CLI no esta instalada. Instalala desde https://aws.amazon.com/cli/"
-[ -f "$JAR_LOCAL" ] || die "No existe $JAR_LOCAL. Ejecuta antes: ./mvnw clean package -DskipTests"
 [ -n "${DB_PASSWORD:-}" ] || die "Falta DB_PASSWORD. Ejecuta: export DB_PASSWORD='tu-password-de-RDS'"
 [ -n "${JWT_SECRET:-}" ] || JWT_SECRET="$(head -c 48 /dev/urandom | base64 | tr -d '\n=' | head -c 48)"
+
+# Siempre se compila: subir un JAR viejo de target/ despliega una version que ya no es la del codigo.
+say "Compilando el JAR (sin tests)"
+./mvnw -q clean package -DskipTests || die "No se pudo compilar el backend"
+[ -f "$JAR_LOCAL" ] || die "No se genero $JAR_LOCAL"
 
 say "Verificando identidad en AWS"
 aws sts get-caller-identity --output table || die "Credenciales invalidas o caducadas. Vuelve a copiarlas de Vocareum."
