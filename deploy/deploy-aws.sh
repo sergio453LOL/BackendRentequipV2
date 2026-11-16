@@ -130,7 +130,7 @@ USER_DATA="$(cat <<EOF
 set -x
 dnf install -y java-21-amazon-corretto-headless
 mkdir -p /opt/rentequip/uploads
-curl -sS -o /opt/rentequip/app.jar "$JAR_URL"
+curl -fsS --retry 5 --retry-delay 5 -o /opt/rentequip/app.jar "$JAR_URL"
 
 cat > /etc/systemd/system/rentequip.service <<'UNIT'
 [Unit]
@@ -231,25 +231,30 @@ INSTANCE_ID="$(aws ec2 run-instances \
 echo "Instancia: $INSTANCE_ID"
 
 aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
-aws ec2 associate-address --allocation-id "$EIP_ALLOC" --instance-id "$INSTANCE_ID" \
-  --allow-reassociation --region "$REGION" >/dev/null
-echo "IP publica: $PUBLIC_IP (fija, asociada a $INSTANCE_ID)"
 BASE="https://${DOMAIN}"
 
 # --------------------------------------------------------------------- 4. esperar a la app
-say "Esperando a que la API responda (arranque + descarga del JAR, ~3 minutos)"
-HEALTH="${BASE}/actuator/health"
+# Se espera a la instancia nueva por su IP propia, ANTES de mover la Elastic IP: si se mirara la URL
+# fija, respondería la instancia anterior, el script daría el despliegue por bueno y borraría el JAR
+# de S3 antes de que la nueva alcanzara a descargarlo.
+OWN_IP="$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text --region "$REGION")"
+say "Esperando a que la instancia nueva responda en http://${OWN_IP}:${APP_PORT} (~3 minutos)"
 for i in $(seq 1 40); do
-  if curl -fsS --max-time 5 "$HEALTH" >/dev/null 2>&1; then
+  if curl -fsS --max-time 5 "http://${OWN_IP}:${APP_PORT}/actuator/health" >/dev/null 2>&1; then
     echo
-    curl -sS "$HEALTH"; echo
-    say "LISTO: ${BASE}/swagger-ui.html"
+    curl -sS "http://${OWN_IP}:${APP_PORT}/actuator/health"; echo
     break
   fi
   printf '.'
   sleep 15
-  [ "$i" -eq 40 ] && die "Sin respuesta por HTTPS en 10 minutos. Prueba http://${PUBLIC_IP}:${APP_PORT}/actuator/health y revisa: aws ec2 get-console-output --instance-id $INSTANCE_ID --region $REGION"
+  [ "$i" -eq 40 ] && die "La instancia nueva no respondio en 10 minutos; la Elastic IP sigue en la anterior. Revisa: aws ec2 get-console-output --instance-id $INSTANCE_ID --region $REGION"
 done
+
+aws ec2 associate-address --allocation-id "$EIP_ALLOC" --instance-id "$INSTANCE_ID" \
+  --allow-reassociation --region "$REGION" >/dev/null
+echo "IP publica: $PUBLIC_IP (fija, asociada a $INSTANCE_ID)"
+say "LISTO: ${BASE}/swagger-ui.html (Caddy emite el certificado en 1-2 minutos)"
 
 # --------------------------------------------------------------------- 5. limpiar y documentar
 aws s3 rm "s3://$BUCKET/app.jar" --region "$REGION" >/dev/null 2>&1 || true
