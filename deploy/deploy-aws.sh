@@ -23,6 +23,7 @@
 #       MAIL_SMTP_AUTH=true MAIL_SMTP_TLS=true  # correos (avisos, comprobantes, códigos de verificación)
 #   3h. (opcional) export IDENTITY_API_TOKEN=...  # SUNAT/RENIEC (decolecta.com): RUC, DNI e insignia de empresa verificada
 #   3i. (opcional) export GEMINI_API_KEY=...  # asistente IA; sin ella responde el buscador local
+#   3j. (opcional) export APISPERU_TOKEN=...  # apisperu (RUC/DNI), se consulta antes que decolecta
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -172,6 +173,7 @@ Environment="SMS_GATEWAY_URL=${SMS_GATEWAY_URL:-}"
 Environment="SMS_GATEWAY_TOKEN=${SMS_GATEWAY_TOKEN:-}"
 Environment="SMS_GATEWAY_SIMS=${SMS_GATEWAY_SIMS:-}"
 Environment="IDENTITY_API_TOKEN=${IDENTITY_API_TOKEN:-}"
+Environment="APISPERU_TOKEN=${APISPERU_TOKEN:-}"
 Environment="GEMINI_API_KEY=${GEMINI_API_KEY:-}"
 Environment="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}"
 
