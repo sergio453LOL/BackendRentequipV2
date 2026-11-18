@@ -17,8 +17,8 @@
 **Repositorio backend:** https://github.com/sergio453LOL/BackendRentequipV2<br>
 **Repositorio frontend (web + móvil):** https://github.com/sergio453LOL/FrontendRentequipV2<br>
 **Web en vivo:** https://sergio453lol.github.io/FrontendRentequipV2/<br>
-**API en vivo:** https://184-197-5-219.sslip.io/swagger-ui.html<br>
-**APK Android:** https://expo.dev/artifacts/eas/QH7AR-TD501LWy1cB-gsJXTZuKgADOlpPjiDtrTBv7U.apk<br>
+**API en vivo:** https://44-215-225-249.sslip.io/swagger-ui.html<br>
+**APK Android:** https://expo.dev/artifacts/eas/-cx_hVkb8TPhNwv-WhEcOKyUC0gRDeDBkBefCE40H5c.apk<br>
 **Evidencias de Deployment AWS y Swagger:** https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD
 
 ### Participación de los integrantes
@@ -203,7 +203,7 @@ erDiagram
 
 ## 5. API REST y Endpoints
 
-Todos los recursos cuelgan de `/api/v1/`, en plural, con verbos HTTP semánticos y `ResponseEntity` explícito. Documentación interactiva en [Swagger UI](https://184-197-5-219.sslip.io/swagger-ui.html) (`http://localhost:8080/swagger-ui.html` en local).
+Todos los recursos cuelgan de `/api/v1/`, en plural, con verbos HTTP semánticos y `ResponseEntity` explícito. Documentación interactiva en [Swagger UI](https://44-215-225-249.sslip.io/swagger-ui.html) (`http://localhost:8080/swagger-ui.html` en local).
 
 | Recurso | Endpoints |
 |---|---|
@@ -320,10 +320,10 @@ Instancia EC2 `t3.small` (Amazon Linux 2023) con **Elastic IP** `184.197.5.219`,
 | Recurso | Enlace |
 |---|---|
 | Web (GitHub Pages) | https://sergio453lol.github.io/FrontendRentequipV2/ |
-| API en vivo (Swagger UI) | https://184-197-5-219.sslip.io/swagger-ui.html |
-| Health check | https://184-197-5-219.sslip.io/actuator/health |
-| Especificación OpenAPI | https://184-197-5-219.sslip.io/v3/api-docs |
-| App móvil (APK Android) | https://expo.dev/artifacts/eas/QH7AR-TD501LWy1cB-gsJXTZuKgADOlpPjiDtrTBv7U.apk (proyecto Expo `@sergiorojas/rentequip`, EAS Build) |
+| API en vivo (Swagger UI) | https://44-215-225-249.sslip.io/swagger-ui.html |
+| Health check | https://44-215-225-249.sslip.io/actuator/health |
+| Especificación OpenAPI | https://44-215-225-249.sslip.io/v3/api-docs |
+| App móvil (APK Android) | https://expo.dev/artifacts/eas/-cx_hVkb8TPhNwv-WhEcOKyUC0gRDeDBkBefCE40H5c.apk (proyecto Expo `@sergiorojas/rentequip`, EAS Build) |
 | **Evidencias de Deployment AWS y Swagger** | [Carpeta en Google Drive](https://drive.google.com/drive/u/3/folders/1xaAGR4s1PUR31v4fTu4G2omBxdpoc3hD) |
 
 Verificado en producción: health `UP`, registro emitiendo access y refresh token, login, creación de recursos con token, enlaces `_links` en las respuestas y 401 sin token.

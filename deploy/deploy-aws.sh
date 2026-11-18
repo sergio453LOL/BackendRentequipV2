@@ -36,7 +36,10 @@ INSTANCE_TYPE="${INSTANCE_TYPE:-t3.small}"
 APP_PORT=8080
 TAG="rentequip"
 
-DB_HOST="${DB_HOST:-rentequipdbp.crxqh2f7lhqi.us-east-1.rds.amazonaws.com}"
+# La RDS se busca por su identificador: un Reset del laboratorio la borra y la nueva tiene otro
+# endpoint y otro security group. DB_HOST y RDS_SG pueden forzarse a mano si hiciera falta.
+RDS_ID="${RDS_ID:-rentequipdbp}"
+DB_HOST="${DB_HOST:-}"
 DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-rentequip}"
 DB_USER="${DB_USER:-postgres}"
@@ -60,6 +63,17 @@ say "Compilando el JAR (sin tests)"
 
 say "Verificando identidad en AWS"
 aws sts get-caller-identity --output table || die "Credenciales invalidas o caducadas. Vuelve a copiarlas de Vocareum."
+
+say "Buscando la RDS $RDS_ID"
+read -r RDS_HOST_FOUND RDS_SG_FOUND RDS_STATUS < <(aws rds describe-db-instances --db-instance-identifier "$RDS_ID" \
+  --query 'DBInstances[0].[Endpoint.Address,VpcSecurityGroups[0].VpcSecurityGroupId,DBInstanceStatus]' \
+  --output text --region "$REGION" 2>/dev/null | tr -d '\r' || true)
+[ -n "${RDS_HOST_FOUND:-}" ] && [ "$RDS_HOST_FOUND" != "None" ] \
+  || die "No existe la RDS $RDS_ID (o aun no tiene endpoint). Creala primero (PostgreSQL 16, base 'rentequip', usuario 'postgres')."
+[ "$RDS_STATUS" = "available" ] || die "La RDS $RDS_ID esta en estado '$RDS_STATUS'. Espera a que este 'available'."
+DB_HOST="${DB_HOST:-$RDS_HOST_FOUND}"
+RDS_SG="${RDS_SG:-$RDS_SG_FOUND}"
+echo "RDS: $DB_HOST (security group $RDS_SG)"
 
 # --------------------------------------------------------------------- 1. subir el jar
 BUCKET="rentequip-deploy-$(date +%s)"
@@ -87,7 +101,6 @@ echo "Security group: $SG_ID (puertos 80, 443 y $APP_PORT abiertos)"
 
 # La RDS no es publica. En lugar de abrirla a internet, se autoriza unicamente al
 # security group del backend, que es el minimo privilegio que hace falta.
-RDS_SG="${RDS_SG:-sg-0bf0c6c75c912183d}"
 say "Autorizando el acceso del backend a la RDS ($RDS_SG)"
 aws ec2 authorize-security-group-ingress --group-id "$RDS_SG"   --protocol tcp --port 5432 --source-group "$SG_ID" --region "$REGION" >/dev/null 2>&1   && echo "Regla anadida: 5432 desde $SG_ID"   || echo "La regla ya existia, se continua"
 
