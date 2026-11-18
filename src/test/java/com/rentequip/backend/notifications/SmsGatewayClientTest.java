@@ -55,6 +55,21 @@ class SmsGatewayClientTest {
     }
 
     @Test
+    void reportsACloudflareChallengeAsABlockedConnectionNotABadKey() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        SmsGatewayClient client = new SmsGatewayClient(builder, BASE_URL, "secret-key", "");
+        server.expect(requestTo(startsWith(BASE_URL))).andRespond(withStatus(HttpStatus.FORBIDDEN)
+                .contentType(org.springframework.http.MediaType.TEXT_HTML)
+                .body("<!DOCTYPE html><html><head><title>Just a moment...</title></head></html>"));
+
+        NotificationDeliveryException error = assertThrows(NotificationDeliveryException.class,
+                () -> client.send("+51987654321", "Hola"));
+
+        assertThat(error.getMessage()).contains("bloqueó la conexión").doesNotContain("API key");
+    }
+
+    @Test
     void withoutUrlOrKeyItAnswersThatSmsIsNotConfigured() {
         SmsGatewayClient client = new SmsGatewayClient(RestClient.builder(), "", "", "");
 

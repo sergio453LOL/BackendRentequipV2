@@ -65,6 +65,10 @@ public class SmsGatewayClient {
             String reply = e.getResponseBodyAsString();
             log.warn("SMS gateway refused the message to {}: HTTP {} {}", toE164, status,
                     reply.length() > 300 ? reply.substring(0, 300) + "..." : reply);
+            if (isBlockedByFirewall(e)) {
+                throw NotificationDeliveryException.failed(
+                        "El servicio de SMS bloqueó la conexión desde nuestro servidor. Usa otro canal por ahora.");
+            }
             throw NotificationDeliveryException.failed(switch (status) {
                 case 401, 403 -> "La API key del servicio de SMS no es válida.";
                 case 422 -> "El servicio de SMS rechazó el número o el mensaje.";
@@ -75,6 +79,22 @@ public class SmsGatewayClient {
             throw NotificationDeliveryException.failed("No pudimos conectarnos con el servicio de SMS. Inténtalo en unos minutos.");
         }
         log.info("SMS sent to {}", toE164);
+    }
+
+    /**
+     * The gateway sits behind Cloudflare, which answers 403 with an HTML "Just a moment..." page to calls
+     * from data-center IPs (AWS). That is not the API rejecting the key, and the API itself always answers JSON.
+     */
+    private static boolean isBlockedByFirewall(RestClientResponseException e) {
+        if (e.getStatusCode().value() != 403) {
+            return false;
+        }
+        var headers = e.getResponseHeaders();
+        if (headers != null && headers.containsHeader("cf-mitigated")) {
+            return true;
+        }
+        String reply = e.getResponseBodyAsString().stripLeading();
+        return reply.startsWith("<") || reply.contains("Just a moment");
     }
 
     private java.net.URI buildUri(UriBuilder uri, String toE164, String body) {
