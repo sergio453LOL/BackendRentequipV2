@@ -9,8 +9,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Emails the payment receipt as soon as a reservation is paid. Only email is automatic: WhatsApp and SMS
- * stay on demand from the receipt buttons, because they cost money per message.
+ * Emails the payment receipt as soon as a reservation is paid, for every client (web and mobile). The web's
+ * payment screen then sends the WhatsApp and SMS copies itself, so it can show how each channel went and
+ * offer to resend the one that failed.
  *
  * <p>AFTER_COMMIT so a checkout that rolls back never sends a receipt, and async so the mail server's
  * latency is not added to the payment response.

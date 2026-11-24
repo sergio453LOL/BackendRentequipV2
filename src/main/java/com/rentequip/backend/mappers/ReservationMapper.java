@@ -9,6 +9,8 @@ import com.rentequip.backend.services.PaymentService;
 import com.rentequip.backend.enums.EquipmentStatus;
 import com.rentequip.backend.enums.ReservationStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Component
 public class ReservationMapper {
@@ -45,7 +47,16 @@ public class ReservationMapper {
                 PaymentService.paymentStatusOf(reservation),
                 reservation.getCreatedAt(),
                 reservation.getReview() != null,
-                reservation.getEquipment().getStatus() == EquipmentStatus.SOLD ? null : reservation.getEquipment().getSalePrice()
+                reservation.getEquipment().getStatus() == EquipmentStatus.SOLD ? null : reservation.getEquipment().getSalePrice(),
+                publicUrl(reservation.getEquipment().getManualUrl())
         );
+    }
+
+    /** Demo manuals are stored as server paths ("/demo-manuals/x.pdf"); the client needs the full address. */
+    private static String publicUrl(String url) {
+        if (url == null || !url.startsWith("/") || RequestContextHolder.getRequestAttributes() == null) {
+            return url;
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath().path(url).toUriString();
     }
 }

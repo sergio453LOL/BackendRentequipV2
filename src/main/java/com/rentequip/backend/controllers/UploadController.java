@@ -28,6 +28,7 @@ public class UploadController {
 
     /** Lowercase slug and .jpg only, so the path can never leave the demo-images folder. */
     private static final Pattern DEMO_IMAGE_NAME = Pattern.compile("^[a-z0-9-]+\\.jpg$");
+    private static final Pattern DEMO_MANUAL_NAME = Pattern.compile("^[a-z0-9-]+\\.pdf$");
 
     private final ImageStorageService imageStorageService;
 
@@ -60,6 +61,24 @@ public class UploadController {
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                .body(resource);
+    }
+
+    /** Usage instructions of demo machines, bundled in the jar like the demo photos. */
+    @GetMapping("/demo-manuals/{name}")
+    public ResponseEntity<Resource> serveDemoManual(@PathVariable String name) {
+        if (!DEMO_MANUAL_NAME.matcher(name).matches()) {
+            throw new ResourceNotFoundException("Manual not found: " + name);
+        }
+        Resource resource = new ClassPathResource("demo-manuals/" + name);
+        if (!resource.exists()) {
+            throw new ResourceNotFoundException("Manual not found: " + name);
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                // Opens in the browser's viewer, and "save" keeps the file name.
+                .header("Content-Disposition", "inline; filename=\"" + name + "\"")
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic())
                 .body(resource);
     }
 

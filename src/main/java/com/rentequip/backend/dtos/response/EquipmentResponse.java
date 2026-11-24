@@ -41,6 +41,8 @@ public record EquipmentResponse(
         String videoUrl,
         /** Null when no operator was described. */
         OperatorProfileResponse operator,
-        boolean ownerCompanyVerified
+        boolean ownerCompanyVerified,
+        /** Usage instructions PDF; null when the owner did not attach one. */
+        String manualUrl
 ) {
 }

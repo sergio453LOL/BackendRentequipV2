@@ -117,6 +117,11 @@ public class Equipment extends BaseEntity {
     @Column(name = "video_url", length = 500)
     private String videoUrl;
 
+    /** PDF with the usage and safety instructions; demo manuals are stored as "/demo-manuals/x.pdf". */
+    @Size(max = 500)
+    @Column(name = "manual_url", length = 500)
+    private String manualUrl;
+
     /** Operator sheet, filled when the rate includes one. */
     @Size(max = 120)
     @Column(name = "operator_name", length = 120)

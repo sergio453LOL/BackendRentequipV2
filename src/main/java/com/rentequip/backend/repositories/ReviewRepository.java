@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
@@ -25,4 +26,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT count(r) FROM Review r WHERE r.reservation.equipment.id = :equipmentId")
     long countByEquipmentId(@Param("equipmentId") Long equipmentId);
+
+    @Query("SELECT DISTINCT r.reservation.equipment.id FROM Review r")
+    Set<Long> findReviewedEquipmentIds();
 }

@@ -112,7 +112,8 @@ public class EquipmentMapper {
                 equipment.getUsageHours(),
                 equipment.getVideoUrl(),
                 operatorOf(equipment),
-                equipment.getOwner().isVerified()
+                equipment.getOwner().isVerified(),
+                publicUrl(equipment.getManualUrl())
         );
     }
 

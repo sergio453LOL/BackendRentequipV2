@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Year;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fills the hour meter and, for machines rented with an operator, the operator sheet of the demo
@@ -38,7 +39,29 @@ public class DemoEquipmentDetailsSeeder implements ApplicationRunner {
             "SCTR vigente\nCertificado de operador de maquinaria pesada (SENCICO)",
             "SCTR vigente\nCapacitación del fabricante\nPrimeros auxilios");
 
+    /** Models of the demo catalogue that come with an instructions PDF (resources/demo-manuals). */
+    private static final Map<String, String> MANUALS = Map.of(
+            "HR3210FCT", "/demo-manuals/rotomartillo-makita-hr3210fct.pdf",
+            "DPU 6555", "/demo-manuals/plancha-wacker-neuson-dpu6555.pdf",
+            "Olympian D200", "/demo-manuals/generador-caterpillar-olympian-d200.pdf");
+
     private final EquipmentRepository equipmentRepository;
+
+    /**
+     * Every unit of a model with a demo manual gets it, as long as its owner is a demo company and has not
+     * attached one of their own.
+     */
+    private void attachManuals() {
+        List<Equipment> withoutManual = equipmentRepository.findAll().stream()
+                .filter(equipment -> equipment.getManualUrl() == null)
+                .filter(equipment -> equipment.getOwner().getEmail() != null && equipment.getOwner().getEmail().endsWith(".demo"))
+                .filter(equipment -> MANUALS.containsKey(equipment.getModel()))
+                .toList();
+        withoutManual.forEach(equipment -> equipment.setManualUrl(MANUALS.get(equipment.getModel())));
+        if (!withoutManual.isEmpty()) {
+            log.info("Demo catalogue: attached the instructions PDF to {} machines", withoutManual.size());
+        }
+    }
 
     public DemoEquipmentDetailsSeeder(EquipmentRepository equipmentRepository) {
         this.equipmentRepository = equipmentRepository;
@@ -65,6 +88,7 @@ public class DemoEquipmentDetailsSeeder implements ApplicationRunner {
         if (!missing.isEmpty()) {
             log.info("Demo catalogue: filled hours of use for {} machines", missing.size());
         }
+        attachManuals();
         // Demo owners stand for companies with their papers in order; their RUCs are not real, so the
         // badge is set here and the status says it was not checked with SUNAT.
         equipmentRepository.findAll().stream()

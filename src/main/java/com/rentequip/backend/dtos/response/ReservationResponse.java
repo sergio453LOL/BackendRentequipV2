@@ -28,6 +28,8 @@ public record ReservationResponse(
         /** The renter already left a review for this reservation. */ 
         boolean reviewed,
         /** Sale price of the machine when its owner offers it for sale (rent with an option to buy); else null. */
-        BigDecimal equipmentSalePrice
+        BigDecimal equipmentSalePrice,
+        /** Usage instructions PDF of the machine; null when its owner attached none. */
+        String equipmentManualUrl
 ) {
 }
