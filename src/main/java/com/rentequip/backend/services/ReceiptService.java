@@ -14,6 +14,7 @@ import com.rentequip.backend.notifications.SmsGatewayClient;
 import com.rentequip.backend.notifications.WhatsAppClient;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.repositories.UserRepository;
+import com.rentequip.backend.security.AbuseGuard;
 import com.rentequip.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public class ReceiptService {
     private final EmailService emailService;
     private final WhatsAppClient whatsAppClient;
     private final SmsGatewayClient smsGatewayClient;
+    private final AbuseGuard abuseGuard;
 
     @Transactional(readOnly = true)
     public ReceiptDeliveryResponse send(Long reservationId, ReceiptChannel channel) {
@@ -65,6 +67,9 @@ public class ReceiptService {
         }
         User user = userRepository.findById(currentUser.requireUserId())
                 .orElseThrow(() -> ResourceNotFoundException.of("User", currentUser.requireUserId()));
+        // Each SMS or WhatsApp costs money and goes to a phone the user typed: one per channel per cooldown
+        // and a daily cap, so the button cannot be used to flood a number.
+        abuseGuard.beforeReceipt(user.getId(), channel);
         ReceiptSummary receipt = summarize(reservation);
 
         return switch (channel) {

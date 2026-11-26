@@ -29,7 +29,7 @@ public class EquipmentCategoryController {
      * Categories are shared by every company, so a company ADMIN is not enough: only a platform admin
      * (PLATFORM_ADMIN_EMAILS, see {@link com.rentequip.backend.security.PlatformAdmins}) changes them.
      */
-    static final String PLATFORM_ADMIN = "hasRole('ADMIN') and @platformAdmins.includes(authentication)";
+    static final String PLATFORM_ADMIN = com.rentequip.backend.security.PlatformAdmins.EXPRESSION;
 
     private final EquipmentCategoryService categoryService;
 

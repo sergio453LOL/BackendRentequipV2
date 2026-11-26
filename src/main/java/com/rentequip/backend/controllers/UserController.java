@@ -76,6 +76,15 @@ public class UserController {
         return ResponseEntity.ok(twoFactorService.confirmSetup(request));
     }
 
+    /**
+     * For an account without a password (created with Google): a code to its email that confirms setting
+     * a first password or turning off the two-step verification.
+     */
+    @PostMapping("/me/account-code")
+    public ResponseEntity<TwoFactorChallengeResponse> sendAccountCode() {
+        return ResponseEntity.ok(twoFactorService.startAccountCode());
+    }
+
     @PostMapping("/me/two-factor/disable")
     public ResponseEntity<UserResponse> disableTwoFactor(@Valid @RequestBody TwoFactorDisableRequest request) {
         return ResponseEntity.ok(twoFactorService.disable(request));

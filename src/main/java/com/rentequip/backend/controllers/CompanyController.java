@@ -9,6 +9,7 @@ import com.rentequip.backend.dtos.response.PageResponse;
 import com.rentequip.backend.dtos.response.UserResponse;
 import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.hateoas.CompanyModelAssembler;
+import com.rentequip.backend.security.PlatformAdmins;
 import com.rentequip.backend.services.CompanyDashboardService;
 import com.rentequip.backend.services.CompanyService;
 import com.rentequip.backend.services.CompanyVerificationService;
@@ -51,7 +52,12 @@ public class CompanyController {
     private final EquipmentService equipmentService;
     private final CompanyVerificationService companyVerificationService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    /**
+     * A company without users, for platform admins only. Companies sign up through /auth/register, which
+     * creates the company together with its administrator; letting any company ADMIN call this would leave
+     * tenants nobody can operate and would hold real RUCs (the tax id is unique) away from their owners.
+     */
+    @PreAuthorize(PlatformAdmins.EXPRESSION)
     @PostMapping
     public ResponseEntity<EntityModel<CompanyResponse>> create(
             @Valid @RequestBody CompanyCreateRequest request,
@@ -61,10 +67,27 @@ public class CompanyController {
         return ResponseEntity.created(location).body(companyAssembler.toModel(created));
     }
 
-    /** Checks the company's RUC with SUNAT and grants the verified badge when it is ACTIVO and HABIDO. */
+    /**
+     * Checks the company's RUC with SUNAT. ACTIVO and HABIDO leaves it waiting for a platform admin, who is
+     * the one that grants the verified badge.
+     */
     @PostMapping("/me/verification")
     public ResponseEntity<CompanyResponse> verifyMine() {
         return ResponseEntity.ok(companyVerificationService.verifyMine());
+    }
+
+    /** A platform admin grants the verified badge (SUNAT is checked again first). */
+    @PreAuthorize(PlatformAdmins.EXPRESSION)
+    @PostMapping("/{id}/verification")
+    public ResponseEntity<CompanyResponse> approveVerification(@PathVariable Long id) {
+        return ResponseEntity.ok(companyVerificationService.approve(id));
+    }
+
+    /** A platform admin withdraws the verified badge. */
+    @PreAuthorize(PlatformAdmins.EXPRESSION)
+    @DeleteMapping("/{id}/verification")
+    public ResponseEntity<CompanyResponse> revokeVerification(@PathVariable Long id) {
+        return ResponseEntity.ok(companyVerificationService.revoke(id));
     }
 
     @GetMapping("/me/dashboard")

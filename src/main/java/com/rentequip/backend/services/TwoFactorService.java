@@ -9,6 +9,7 @@ import com.rentequip.backend.entities.User;
 import com.rentequip.backend.entities.VerificationCode;
 import com.rentequip.backend.enums.TwoFactorChannel;
 import com.rentequip.backend.enums.VerificationPurpose;
+import com.rentequip.backend.exceptions.InvalidOperationException;
 import com.rentequip.backend.exceptions.RentEquipException;
 import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.exceptions.VerificationCodeException;
@@ -87,15 +88,54 @@ public class TwoFactorService {
         return userMapper.toResponse(user);
     }
 
-    /** Turning the protection off asks for the password, so an unattended open session cannot do it. */
-    @Transactional
+    /**
+     * Turning the protection off asks for the password, so an unattended open session cannot do it. An
+     * account without a password (created with Google) answers with an email code from
+     * {@link #startAccountCode()} instead. A wrong code still counts as an attempt, hence no rollback.
+     */
+    @Transactional(noRollbackFor = VerificationCodeException.class)
     public UserResponse disable(TwoFactorDisableRequest request) {
         User user = me();
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw VerificationCodeException.wrongPassword();
+        if (user.hasPassword()) {
+            if (request.password() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
+                throw VerificationCodeException.wrongPassword();
+            }
+        } else {
+            consumeAccountCode(user, request.challengeId(), request.code());
         }
         user.setTwoFactorChannel(null);
         return userMapper.toResponse(user);
+    }
+
+    /**
+     * Sends a code to the user's own email to confirm a change that would otherwise ask for the current
+     * password. Only for accounts without one: their email is the one Google verified at sign-up.
+     */
+    @Transactional
+    public TwoFactorChallengeResponse startAccountCode() {
+        User user = me();
+        if (user.hasPassword()) {
+            throw new InvalidOperationException("Tu cuenta tiene contraseña: úsala para confirmar el cambio.");
+        }
+        return sendCode(user, VerificationPurpose.ACCOUNT, TwoFactorChannel.EMAIL);
+    }
+
+    /**
+     * Spends an account code of this user. The caller's transaction must not roll back on
+     * VerificationCodeException, or a wrong code would not count as an attempt.
+     */
+    public void consumeAccountCode(User user, String challengeId, String plainCode) {
+        try {
+            if (challengeId == null || plainCode == null) {
+                throw VerificationCodeException.expired();
+            }
+            VerificationCode code = codeRepository.findByChallengeId(challengeId)
+                    .filter(found -> found.getUser().getId().equals(user.getId()))
+                    .orElseThrow(VerificationCodeException::expired);
+            consume(code, plainCode, VerificationPurpose.ACCOUNT);
+        } catch (VerificationCodeException failure) {
+            throw VerificationCodeException.inSession(failure);
+        }
     }
 
     private TwoFactorChallengeResponse sendCode(User user, VerificationPurpose purpose, TwoFactorChannel channel) {
@@ -128,8 +168,11 @@ public class TwoFactorService {
             case EMAIL -> {
                 emailService.sendOrFail(user.getEmail(), plainCode + " es tu código de RentEquip", "verification-code",
                         Map.of("code", plainCode, "minutes", minutes, "name", user.getFirstName(),
-                                "action", purpose == VerificationPurpose.LOGIN
-                                        ? "iniciar sesión" : "activar la verificación en dos pasos"));
+                                "action", switch (purpose) {
+                                    case LOGIN -> "iniciar sesión";
+                                    case SETUP -> "activar la verificación en dos pasos";
+                                    case ACCOUNT -> "confirmar un cambio en la seguridad de tu cuenta";
+                                }));
                 yield ReceiptService.maskEmail(user.getEmail());
             }
             case SMS -> {

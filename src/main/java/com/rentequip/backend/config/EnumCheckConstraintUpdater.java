@@ -1,6 +1,7 @@
 package com.rentequip.backend.config;
 
 import com.rentequip.backend.enums.EquipmentStatus;
+import com.rentequip.backend.enums.VerificationPurpose;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,8 @@ public class EnumCheckConstraintUpdater implements ApplicationRunner {
             }
         }
         rebuild("equipment", "status", EquipmentStatus.class);
+        // VerificationPurpose.ACCOUNT: email codes of accounts created with Google.
+        rebuild("verification_codes", "purpose", VerificationPurpose.class);
     }
 
     private void rebuild(String table, String column, Class<? extends Enum<?>> type) {

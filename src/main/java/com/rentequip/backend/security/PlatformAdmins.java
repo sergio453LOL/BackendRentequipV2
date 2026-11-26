@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 @Component("platformAdmins")
 public class PlatformAdmins {
 
+    /** The {@code @PreAuthorize} expression of everything only a platform admin may do. */
+    public static final String EXPRESSION = "hasRole('ADMIN') and @platformAdmins.includes(authentication)";
+
     private final Set<String> emails;
 
     public PlatformAdmins(@Value("${rentequip.platform.admin-emails:}") List<String> emails) {

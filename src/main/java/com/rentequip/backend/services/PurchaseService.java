@@ -183,6 +183,7 @@ public class PurchaseService {
             throw new InvalidOperationException("This machine has already been sold");
         }
         requireNoOtherRentals(request);
+        refreshCredit(request);
 
         String reference = null;
         if (request.getFinalPrice().signum() > 0) {
@@ -213,6 +214,30 @@ public class PurchaseService {
         }
         log.info("Equipment {} sold to company {} (purchase {})", equipment.getId(), request.getBuyer().getId(), purchaseId);
         return toResponse(request);
+    }
+
+    /**
+     * The credit was worked out when the buyer asked, but the rental may have been cancelled and refunded
+     * since. Right before charging, the reservation must still allow the purchase and the credit is cut to
+     * what the rent actually captured now (never raised: the agreed price only goes up if rent was refunded).
+     */
+    private void refreshCredit(PurchaseRequest request) {
+        Reservation reservation = request.getReservation();
+        if (!PURCHASABLE_FROM.contains(reservation.getStatus())) {
+            throw new InvalidOperationException("The rental this purchase came from is " + reservation.getStatus()
+                    + ", so the machine can no longer be bought from it");
+        }
+        BigDecimal current = rentPaid(reservation)
+                .multiply(BigDecimal.valueOf(EquipmentMapper.rentCreditPercentOf(reservation.getEquipment())))
+                .divide(HUNDRED, 2, RoundingMode.HALF_UP)
+                .min(request.getListPrice());
+        BigDecimal credit = current.min(request.getRentCredit());
+        if (credit.compareTo(request.getRentCredit()) != 0) {
+            log.info("Purchase {}: rent credit cut from {} to {} (rent refunded since the request)",
+                    request.getId(), request.getRentCredit(), credit);
+            request.setRentCredit(credit);
+            request.setFinalPrice(request.getListPrice().subtract(credit));
+        }
     }
 
     /** Null when the renter may buy; otherwise a stable code the client turns into words. */
