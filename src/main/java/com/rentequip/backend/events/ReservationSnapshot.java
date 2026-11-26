@@ -17,6 +17,8 @@ public record ReservationSnapshot(
         Long reservationId,
         Long equipmentId,
         String equipmentName,
+        /** Where the machine is picked up (its own address, else the owner's); used as the calendar location. */
+        String equipmentAddress,
         Long ownerCompanyId,
         String ownerCompanyName,
         String ownerEmail,
@@ -36,6 +38,7 @@ public record ReservationSnapshot(
                 reservation.getId(),
                 reservation.getEquipment().getId(),
                 reservation.getEquipment().getName(),
+                firstNonBlank(reservation.getEquipment().getAddress(), reservation.getEquipment().getOwner().getAddress()),
                 reservation.getEquipment().getOwner().getId(),
                 reservation.getEquipment().getOwner().getName(),
                 reservation.getEquipment().getOwner().getEmail(),
@@ -49,5 +52,9 @@ public record ReservationSnapshot(
                 reservation.getCurrency(),
                 reservation.getStatus()
         );
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
     }
 }

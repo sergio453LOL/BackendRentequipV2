@@ -1,5 +1,8 @@
 package com.rentequip.backend.services;
 
+import com.rentequip.backend.dtos.request.CompanyCreateRequest;
+import com.rentequip.backend.dtos.request.GoogleLoginRequest;
+import com.rentequip.backend.dtos.request.GoogleRegisterRequest;
 import com.rentequip.backend.dtos.request.LoginRequest;
 import com.rentequip.backend.dtos.request.RefreshTokenRequest;
 import com.rentequip.backend.dtos.request.RegisterRequest;
@@ -10,11 +13,15 @@ import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.User;
 import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.exceptions.DuplicateResourceException;
+import com.rentequip.backend.exceptions.GoogleSignInException;
 import com.rentequip.backend.exceptions.UnauthorizedException;
 import com.rentequip.backend.repositories.UserRepository;
 import com.rentequip.backend.security.CompanyUserDetails;
 import com.rentequip.backend.security.CustomUserDetailsService;
+import com.rentequip.backend.security.GoogleIdTokenVerifier;
+import com.rentequip.backend.security.GoogleIdTokenVerifier.GoogleIdentity;
 import com.rentequip.backend.security.JwtService;
+import com.rentequip.backend.security.RecaptchaVerifier;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,12 +32,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.util.Base64;
+
 /**
  * Registration, login and refresh. The only place in the application that mints tokens.
  */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
@@ -40,6 +52,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final TwoFactorService twoFactorService;
     private final CompanyVerificationService companyVerificationService;
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
+    private final RecaptchaVerifier recaptchaVerifier;
 
     /** A login ends either with the tokens or, when the two-step verification is on, with a code sent. */
     public record LoginOutcome(AuthResponse tokens, TwoFactorChallengeResponse challenge) {
@@ -54,14 +68,60 @@ public class AuthService {
         if (userRepository.existsByEmailIgnoreCase(request.email())) {
             throw DuplicateResourceException.of("User", "email", request.email());
         }
-        Company company = companyService.createEntity(request.company());
+        return createTenant(request.company(), request.firstName(), request.lastName(), request.email(),
+                request.password(), request.phone());
+    }
+
+    /**
+     * "Continuar con Google" on the login page. The email Google verified picks the account; an account with
+     * the two-step verification on still gets its code, as with the password.
+     */
+    @Transactional
+    public LoginOutcome loginWithGoogle(GoogleLoginRequest request) {
+        GoogleIdentity identity = googleIdTokenVerifier.verify(request.credential());
+        User user = userRepository.findByEmailIgnoreCase(identity.email())
+                .orElseThrow(GoogleSignInException::notRegistered);
+        if (!user.isEnabled()) {
+            throw new UnauthorizedException("This account has been disabled");
+        }
+        if (user.getTwoFactorChannel() != null) {
+            return new LoginOutcome(null, twoFactorService.startLogin(user));
+        }
+        CompanyUserDetails principal = CompanyUserDetails.from(user);
+        return new LoginOutcome(issueTokens(principal, companyNameOf(principal)), null);
+    }
+
+    /**
+     * Sign-up after a Google login found no account. The email comes from the checked credential, never from
+     * the form, and the password is a random one nobody knows: this administrator signs in with Google.
+     */
+    @Transactional
+    public AuthResponse registerWithGoogle(GoogleRegisterRequest request) {
+        GoogleIdentity identity = googleIdTokenVerifier.verify(request.credential());
+        if (userRepository.existsByEmailIgnoreCase(identity.email())) {
+            throw DuplicateResourceException.of("User", "email", identity.email());
+        }
+        // 32 random bytes: under the 72 bytes BCrypt accepts, and far beyond guessing.
+        byte[] secret = new byte[32];
+        RANDOM.nextBytes(secret);
+        String unusablePassword = Base64.getUrlEncoder().withoutPadding().encodeToString(secret);
+        return createTenant(request.company(), request.firstName(), request.lastName(), identity.email(),
+                unusablePassword, request.phone());
+    }
+
+    private AuthResponse createTenant(CompanyCreateRequest companyRequest, String firstName, String lastName,
+                                      String email, String rawPassword, String phone) {
+        Company company = companyService.createEntity(companyRequest);
         companyVerificationService.verifyQuietly(company);
-        User administrator = userRepository.save(buildAdministrator(request, company));
+        User administrator = userRepository.save(
+                buildAdministrator(firstName, lastName, email, rawPassword, phone, company));
         return issueTokens(CompanyUserDetails.from(administrator), company.getName());
     }
 
     @Transactional
     public LoginOutcome login(LoginRequest request) {
+        // Before the password: a bot guessing passwords is turned away without learning anything.
+        recaptchaVerifier.check(request.recaptchaToken(), "login");
         CompanyUserDetails principal = authenticate(request);
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
@@ -114,13 +174,14 @@ public class AuthService {
         }
     }
 
-    private User buildAdministrator(RegisterRequest request, Company company) {
+    private User buildAdministrator(String firstName, String lastName, String email, String rawPassword,
+                                    String phone, Company company) {
         User administrator = new User();
-        administrator.setFirstName(request.firstName().trim());
-        administrator.setLastName(request.lastName().trim());
-        administrator.setEmail(request.email().trim().toLowerCase());
-        administrator.setPassword(passwordEncoder.encode(request.password()));
-        administrator.setPhone(request.phone());
+        administrator.setFirstName(firstName.trim());
+        administrator.setLastName(lastName.trim());
+        administrator.setEmail(email.trim().toLowerCase());
+        administrator.setPassword(passwordEncoder.encode(rawPassword));
+        administrator.setPhone(phone);
         administrator.setRole(UserRole.ADMIN);
         administrator.setEnabled(true);
         administrator.setCompany(company);

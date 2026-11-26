@@ -1,7 +1,9 @@
 package com.rentequip.backend.services;
 
+import com.rentequip.backend.events.ReservationCalendar.CalendarInvite;
 import com.rentequip.backend.exceptions.NotificationDeliveryException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,17 +45,28 @@ public class EmailService {
     private String from;
 
     public void send(String to, String subject, String template, Map<String, Object> variables) {
+        send(to, subject, template, variables, null);
+    }
+
+    /** Same as {@link #send}, with a calendar invitation attached (the mail client adds or removes the event). */
+    public void send(String to, String subject, String template, Map<String, Object> variables,
+                     CalendarInvite invite) {
         String body = render(template, variables);
         if (!enabled) {
             log.info("Mail disabled, skipping '{}' to {} (template {})", subject, to, template);
             return;
         }
         try {
-            mailSender.send(buildMessage(to, subject, body));
+            mailSender.send(buildMessage(to, subject, body, invite));
             log.info("Sent '{}' to {}", subject, to);
         } catch (Exception failure) {
             log.warn("Could not send '{}' to {}: {}", subject, to, failure.getMessage());
         }
+    }
+
+    /** The address the messages come from; calendar invitations name it as their organizer. */
+    public String fromAddress() {
+        return from;
     }
 
     /**
@@ -65,7 +78,7 @@ public class EmailService {
             throw NotificationDeliveryException.notConfigured("correo");
         }
         try {
-            mailSender.send(buildMessage(to, subject, render(template, variables)));
+            mailSender.send(buildMessage(to, subject, render(template, variables), null));
             log.info("Sent '{}' to {}", subject, to);
         } catch (Exception failure) {
             log.warn("Could not send '{}' to {}: {}", subject, to, failure.getMessage());
@@ -73,7 +86,7 @@ public class EmailService {
         }
     }
 
-    private MimeMessage buildMessage(String to, String subject, String body) throws Exception {
+    private MimeMessage buildMessage(String to, String subject, String body, CalendarInvite invite) throws Exception {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
         helper.setFrom(from);
@@ -82,6 +95,11 @@ public class EmailService {
         helper.setText(body, true);
         // Inline attachment referenced as cid:rentequip-logo: shows in Gmail and Outlook, unlike SVG or data URIs.
         helper.addInline(LOGO_CONTENT_ID, LOGO, MediaType.IMAGE_PNG_VALUE);
+        if (invite != null) {
+            // The method in the content type is what makes Gmail and Outlook treat the file as an invitation.
+            helper.addAttachment("reserva.ics", new ByteArrayDataSource(invite.content().getBytes(StandardCharsets.UTF_8),
+                    "text/calendar; charset=UTF-8; method=" + invite.method()));
+        }
         return message;
     }
 
