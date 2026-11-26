@@ -156,9 +156,17 @@ public class ReservationService {
         return PageResponse.from(page, reservationMapper::toResponse);
     }
 
+    /**
+     * Every reservation of one machine, with renters and amounts: only its owner may list them. Anyone else
+     * sees when the machine is busy through {@link #findBlockedWindows}, which names nobody.
+     */
     @Transactional(readOnly = true)
     public PageResponse<ReservationResponse> findByEquipment(Long equipmentId, Pageable pageable) {
-        assertEquipmentExists(equipmentId);
+        Equipment equipment = equipmentRepository.findById(equipmentId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Equipment", equipmentId));
+        if (!equipment.getOwner().getId().equals(currentUser.requireCompanyId())) {
+            throw ForbiddenOperationException.notOwner("equipment", equipmentId);
+        }
         return PageResponse.from(reservationRepository.findByEquipmentId(equipmentId, pageable),
                 reservationMapper::toResponse);
     }

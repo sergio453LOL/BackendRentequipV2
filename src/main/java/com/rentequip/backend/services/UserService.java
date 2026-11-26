@@ -90,13 +90,20 @@ public class UserService {
         user.setEnabled(false);
     }
 
+    /** A user's profile carries their email and phone, so only people of the same company may read it. */
     @Transactional(readOnly = true)
     public UserResponse findById(Long userId) {
-        return userMapper.toResponse(findOrThrow(userId));
+        User user = findOrThrow(userId);
+        validateSameCompany(user, currentUser.requireCompanyId());
+        return userMapper.toResponse(user);
     }
 
+    /** The staff of a company, with their contact details: visible only from inside that company. */
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> findByCompany(Long companyId, UserRole role, Pageable pageable) {
+        if (!companyId.equals(currentUser.requireCompanyId())) {
+            throw ForbiddenOperationException.notOwner("company", companyId);
+        }
         assertCompanyExists(companyId);
         Page<User> page = role == null
                 ? userRepository.findByCompanyId(companyId, pageable)
