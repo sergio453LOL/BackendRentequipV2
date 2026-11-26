@@ -21,6 +21,7 @@ import com.rentequip.backend.security.CustomUserDetailsService;
 import com.rentequip.backend.security.GoogleIdTokenVerifier;
 import com.rentequip.backend.security.GoogleIdTokenVerifier.GoogleIdentity;
 import com.rentequip.backend.security.JwtService;
+import com.rentequip.backend.security.RecaptchaVerifier;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -52,6 +53,7 @@ public class AuthService {
     private final TwoFactorService twoFactorService;
     private final CompanyVerificationService companyVerificationService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
+    private final RecaptchaVerifier recaptchaVerifier;
 
     /** A login ends either with the tokens or, when the two-step verification is on, with a code sent. */
     public record LoginOutcome(AuthResponse tokens, TwoFactorChallengeResponse challenge) {
@@ -118,6 +120,8 @@ public class AuthService {
 
     @Transactional
     public LoginOutcome login(LoginRequest request) {
+        // Before the password: a bot guessing passwords is turned away without learning anything.
+        recaptchaVerifier.check(request.recaptchaToken(), "login");
         CompanyUserDetails principal = authenticate(request);
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));

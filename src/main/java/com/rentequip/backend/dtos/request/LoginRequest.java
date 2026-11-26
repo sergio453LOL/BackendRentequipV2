@@ -10,6 +10,14 @@ public record LoginRequest(
         String email,
 
         @NotBlank @Size(max = 64)
-        String password
+        String password,
+
+        /** reCAPTCHA v3 token from the web login (action "login"). The mobile app does not send one. */
+        @Size(max = 4096)
+        String recaptchaToken
 ) {
+
+    public LoginRequest(String email, String password) {
+        this(email, password, null);
+    }
 }
