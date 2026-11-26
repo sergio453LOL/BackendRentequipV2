@@ -10,6 +10,7 @@ import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.Reservation;
 import com.rentequip.backend.enums.EquipmentStatus;
+import com.rentequip.backend.enums.PurchaseStatus;
 import com.rentequip.backend.events.ReservationCreatedEvent;
 import com.rentequip.backend.events.ReservationSnapshot;
 import com.rentequip.backend.events.ReservationStatusChangedEvent;
@@ -24,6 +25,7 @@ import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.mappers.ReservationMapper;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
+import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -62,6 +65,7 @@ public class ReservationService {
     private final ReservationStatusPolicy statusPolicy;
     private final PaymentService paymentService;
     private final OfferService offerService;
+    private final PurchaseRequestRepository purchaseRepository;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservationResponse create(ReservationCreateRequest request) {
@@ -209,6 +213,24 @@ public class ReservationService {
         appendReason(reservation, request.reason());
         synchronizeEquipmentStatus(reservation, request.status());
         paymentService.settle(reservation, request.status());
+        cancelOpenPurchases(reservation, request.status());
+    }
+
+    /**
+     * A cancelled or rejected rental refunds its rent, so a purchase asked from it would be credited with
+     * money the buyer got back: its open purchase requests end with it.
+     */
+    private void cancelOpenPurchases(Reservation reservation, ReservationStatus status) {
+        if (status != ReservationStatus.CANCELLED && status != ReservationStatus.REJECTED) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        purchaseRepository.findByReservationIdAndStatusIn(reservation.getId(),
+                        List.of(PurchaseStatus.PENDING, PurchaseStatus.ACCEPTED))
+                .forEach(purchase -> {
+                    purchase.setStatus(PurchaseStatus.CANCELLED);
+                    purchase.setDecidedAt(now);
+                });
     }
 
     /**
@@ -288,6 +310,10 @@ public class ReservationService {
         EquipmentStatus status = equipment.getStatus();
         if (status == EquipmentStatus.MAINTENANCE || status == EquipmentStatus.INACTIVE || status == EquipmentStatus.SOLD) {
             throw EquipmentUnavailableException.of(equipment.getId(), status);
+        }
+        // The machine of a deactivated company is off the market even if its own status was left AVAILABLE.
+        if (!equipment.getOwner().isActive()) {
+            throw EquipmentUnavailableException.of(equipment.getId(), EquipmentStatus.INACTIVE);
         }
     }
 

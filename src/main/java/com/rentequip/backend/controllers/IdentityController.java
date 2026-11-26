@@ -6,6 +6,7 @@ import com.rentequip.backend.identity.DniInfo;
 import com.rentequip.backend.identity.IdentityLookupClient;
 import com.rentequip.backend.identity.RucInfo;
 import com.rentequip.backend.identity.RucValidator;
+import com.rentequip.backend.security.AbuseGuard;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,18 +27,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class IdentityController {
 
     private final IdentityLookupClient lookupClient;
+    /** Public and backed by a paid quota: limited per IP and per day (429 past the limit). */
+    private final AbuseGuard abuseGuard;
 
     @GetMapping("/ruc/{ruc}")
     public ResponseEntity<RucInfo> findRuc(@PathVariable @Pattern(regexp = "\\d{11}", message = "El RUC tiene 11 dígitos") String ruc) {
         if (!RucValidator.isValid(ruc)) {
             throw new InvalidOperationException("El RUC no es válido: revisa los dígitos");
         }
+        abuseGuard.beforeIdentityLookup();
         return ResponseEntity.ok(lookupClient.findRuc(ruc)
                 .orElseThrow(() -> new ResourceNotFoundException("SUNAT no tiene registrado el RUC " + ruc)));
     }
 
     @GetMapping("/dni/{dni}")
     public ResponseEntity<DniInfo> findDni(@PathVariable @Pattern(regexp = "\\d{8}", message = "El DNI tiene 8 dígitos") String dni) {
+        abuseGuard.beforeIdentityLookup();
         return ResponseEntity.ok(lookupClient.findDni(dni)
                 .orElseThrow(() -> new ResourceNotFoundException("RENIEC no tiene registrado el DNI " + dni)));
     }

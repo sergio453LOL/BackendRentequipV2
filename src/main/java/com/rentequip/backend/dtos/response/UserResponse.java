@@ -18,6 +18,8 @@ public record UserResponse(
         String companyName,
         LocalDateTime createdAt,
         /** Null when the two-step verification is off. */
-        TwoFactorChannel twoFactorChannel
+        TwoFactorChannel twoFactorChannel,
+        /** False for an account created with Google that never set a password: it confirms changes by email code. */
+        boolean passwordSet
 ) {
 }

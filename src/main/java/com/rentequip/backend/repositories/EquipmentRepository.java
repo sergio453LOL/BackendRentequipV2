@@ -65,7 +65,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
      */
     @Query(value = """
             SELECT e FROM Equipment e
-            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE
+            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE AND e.owner.active = true
               AND (:anyCategory = false
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id IN :categoryIds))
@@ -93,7 +93,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                      """ + DISTANCE_KM + ", e.id",
             countQuery = """
             SELECT count(e) FROM Equipment e
-            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE
+            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE AND e.owner.active = true
               AND (:anyCategory = false
                    OR EXISTS (SELECT 1 FROM Equipment eq JOIN eq.categories c
                               WHERE eq.id = e.id AND c.id IN :categoryIds))
@@ -143,7 +143,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     /** Brands with at least one machine for rent, for the catalogue's brand filter. */
     @Query("""
             SELECT DISTINCT e.brand FROM Equipment e
-            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE AND e.brand IS NOT NULL
+            WHERE e.status = com.rentequip.backend.enums.EquipmentStatus.AVAILABLE AND e.owner.active = true
+              AND e.brand IS NOT NULL
             ORDER BY e.brand
             """)
     List<String> findAvailableBrands();

@@ -24,4 +24,8 @@ public interface PurchaseRequestRepository extends JpaRepository<PurchaseRequest
 
     List<PurchaseRequest> findByEquipmentIdAndStatusIn(Long equipmentId, Collection<PurchaseStatus> statuses);
 
+    boolean existsByEquipmentId(Long equipmentId);
+
+    List<PurchaseRequest> findByReservationIdAndStatusIn(Long reservationId, Collection<PurchaseStatus> statuses);
+
 }

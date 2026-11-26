@@ -49,6 +49,14 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String password;
 
+    /**
+     * False for accounts created with Google, whose password is a random one nobody knows: they set their
+     * first password (or turn off the two-step verification) with a code sent to their email instead of the
+     * current password. Nullable so the column can be added to an existing table; null means true.
+     */
+    @Column(name = "password_set")
+    private Boolean passwordSet = Boolean.TRUE;
+
     @Size(max = 20)
     @Column(length = 20)
     private String phone;
@@ -75,4 +83,13 @@ public class User extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    /** Whether the user knows their password (see {@link #passwordSet}). */
+    public boolean hasPassword() {
+        return !Boolean.FALSE.equals(passwordSet);
+    }
+
+    public void setPasswordSet(boolean passwordSet) {
+        this.passwordSet = passwordSet;
+    }
 }

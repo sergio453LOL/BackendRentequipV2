@@ -16,6 +16,7 @@ import com.rentequip.backend.exceptions.DuplicateResourceException;
 import com.rentequip.backend.exceptions.GoogleSignInException;
 import com.rentequip.backend.exceptions.UnauthorizedException;
 import com.rentequip.backend.repositories.UserRepository;
+import com.rentequip.backend.security.AbuseGuard;
 import com.rentequip.backend.security.CompanyUserDetails;
 import com.rentequip.backend.security.CustomUserDetailsService;
 import com.rentequip.backend.security.GoogleIdTokenVerifier;
@@ -54,6 +55,7 @@ public class AuthService {
     private final CompanyVerificationService companyVerificationService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
     private final RecaptchaVerifier recaptchaVerifier;
+    private final AbuseGuard abuseGuard;
 
     /** A login ends either with the tokens or, when the two-step verification is on, with a code sent. */
     public record LoginOutcome(AuthResponse tokens, TwoFactorChallengeResponse challenge) {
@@ -65,11 +67,12 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        abuseGuard.beforeRegister();
         if (userRepository.existsByEmailIgnoreCase(request.email())) {
             throw DuplicateResourceException.of("User", "email", request.email());
         }
         return createTenant(request.company(), request.firstName(), request.lastName(), request.email(),
-                request.password(), request.phone());
+                request.password(), true, request.phone());
     }
 
     /**
@@ -81,22 +84,24 @@ public class AuthService {
         GoogleIdentity identity = googleIdTokenVerifier.verify(request.credential());
         User user = userRepository.findByEmailIgnoreCase(identity.email())
                 .orElseThrow(GoogleSignInException::notRegistered);
-        if (!user.isEnabled()) {
+        CompanyUserDetails principal = CompanyUserDetails.from(user);
+        if (!principal.isEnabled()) {
             throw new UnauthorizedException("This account has been disabled");
         }
         if (user.getTwoFactorChannel() != null) {
             return new LoginOutcome(null, twoFactorService.startLogin(user));
         }
-        CompanyUserDetails principal = CompanyUserDetails.from(user);
         return new LoginOutcome(issueTokens(principal, companyNameOf(principal)), null);
     }
 
     /**
      * Sign-up after a Google login found no account. The email comes from the checked credential, never from
-     * the form, and the password is a random one nobody knows: this administrator signs in with Google.
+     * the form, and the password is a random one nobody knows: this administrator signs in with Google, and
+     * can set a real password later from the profile with a code sent to that email.
      */
     @Transactional
     public AuthResponse registerWithGoogle(GoogleRegisterRequest request) {
+        abuseGuard.beforeRegister();
         GoogleIdentity identity = googleIdTokenVerifier.verify(request.credential());
         if (userRepository.existsByEmailIgnoreCase(identity.email())) {
             throw DuplicateResourceException.of("User", "email", identity.email());
@@ -106,15 +111,15 @@ public class AuthService {
         RANDOM.nextBytes(secret);
         String unusablePassword = Base64.getUrlEncoder().withoutPadding().encodeToString(secret);
         return createTenant(request.company(), request.firstName(), request.lastName(), identity.email(),
-                unusablePassword, request.phone());
+                unusablePassword, false, request.phone());
     }
 
     private AuthResponse createTenant(CompanyCreateRequest companyRequest, String firstName, String lastName,
-                                      String email, String rawPassword, String phone) {
+                                      String email, String rawPassword, boolean passwordSet, String phone) {
         Company company = companyService.createEntity(companyRequest);
         companyVerificationService.verifyQuietly(company);
         User administrator = userRepository.save(
-                buildAdministrator(firstName, lastName, email, rawPassword, phone, company));
+                buildAdministrator(firstName, lastName, email, rawPassword, passwordSet, phone, company));
         return issueTokens(CompanyUserDetails.from(administrator), company.getName());
     }
 
@@ -122,7 +127,17 @@ public class AuthService {
     public LoginOutcome login(LoginRequest request) {
         // Before the password: a bot guessing passwords is turned away without learning anything.
         recaptchaVerifier.check(request.recaptchaToken(), "login");
-        CompanyUserDetails principal = authenticate(request);
+        // reCAPTCHA cannot be required (the mobile app has none), so failures per email and per IP are
+        // what really stops password guessing.
+        abuseGuard.beforeLogin(request.email());
+        CompanyUserDetails principal;
+        try {
+            principal = authenticate(request);
+        } catch (UnauthorizedException failed) {
+            abuseGuard.loginFailed(request.email());
+            throw failed;
+        }
+        abuseGuard.loginSucceeded(request.email());
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
         if (user.getTwoFactorChannel() != null) {
@@ -175,12 +190,13 @@ public class AuthService {
     }
 
     private User buildAdministrator(String firstName, String lastName, String email, String rawPassword,
-                                    String phone, Company company) {
+                                    boolean passwordSet, String phone, Company company) {
         User administrator = new User();
         administrator.setFirstName(firstName.trim());
         administrator.setLastName(lastName.trim());
         administrator.setEmail(email.trim().toLowerCase());
         administrator.setPassword(passwordEncoder.encode(rawPassword));
+        administrator.setPasswordSet(passwordSet);
         administrator.setPhone(phone);
         administrator.setRole(UserRole.ADMIN);
         administrator.setEnabled(true);

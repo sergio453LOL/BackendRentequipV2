@@ -14,6 +14,7 @@ import com.rentequip.backend.exceptions.ForbiddenOperationException;
 import com.rentequip.backend.exceptions.InvalidOperationException;
 import com.rentequip.backend.exceptions.PasswordChangeException;
 import com.rentequip.backend.exceptions.ResourceNotFoundException;
+import com.rentequip.backend.exceptions.VerificationCodeException;
 import com.rentequip.backend.mappers.UserMapper;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.UserRepository;
@@ -34,6 +35,7 @@ public class UserService {
     private final CompanyRepository companyRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final TwoFactorService twoFactorService;
 
     @Transactional
     public UserResponse create(UserCreateRequest request) {
@@ -70,16 +72,27 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    @Transactional
+    /**
+     * With the current password; or, for an account that has none (created with Google), with a code sent
+     * to its email by {@code POST /users/me/account-code}. A wrong code still counts as an attempt, hence no
+     * rollback for it.
+     */
+    @Transactional(noRollbackFor = VerificationCodeException.class)
     public void changeMyPassword(PasswordChangeRequest request) {
         User user = findOrThrow(currentUser.requireUserId());
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw PasswordChangeException.wrongCurrentPassword();
-        }
-        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
-            throw PasswordChangeException.sameAsCurrent();
+        if (user.hasPassword()) {
+            if (request.currentPassword() == null
+                    || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+                throw PasswordChangeException.wrongCurrentPassword();
+            }
+            if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+                throw PasswordChangeException.sameAsCurrent();
+            }
+        } else {
+            twoFactorService.consumeAccountCode(user, request.challengeId(), request.code());
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordSet(true);
     }
 
     @Transactional

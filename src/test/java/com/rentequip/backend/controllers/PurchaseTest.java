@@ -128,6 +128,38 @@ class PurchaseTest {
     }
 
     @Test
+    void cancellingTheRentalEndsItsPurchaseSoTheRefundedRentIsNeverCredited() throws Exception {
+        putUpForSale("50000", 50);
+        long reservationId = confirmedPaidReservation();
+        long purchaseId = readId(mockMvc.perform(post("/api/v1/reservations/{id}/purchase-requests", reservationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rentCredit").value(1350.0)));
+        mockMvc.perform(post("/api/v1/purchase-requests/{id}/acceptance", purchaseId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(status().isOk());
+
+        // The renter cancels the confirmed rental: the rent is refunded and the purchase ends with it.
+        mockMvc.perform(post("/api/v1/reservations/{id}/cancellation", reservationId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("REFUNDED"));
+        mockMvc.perform(get("/api/v1/purchase-requests").param("role", "RENTER")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken)))
+                .andExpect(jsonPath("$.content[0].id").value(purchaseId))
+                .andExpect(jsonPath("$.content[0].status").value("CANCELLED"));
+
+        mockMvc.perform(post("/api/v1/purchase-requests/{id}/payment", purchaseId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(renterToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentToken\":\"tok_visa\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/equipment/{id}", equipmentId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
+                .andExpect(jsonPath("$.status").value("AVAILABLE"));
+    }
+
+    @Test
     void anotherRentersPendingReservationBlocksTheSale() throws Exception {
         putUpForSale("50000", 50);
         long reservationId = confirmedPaidReservation();

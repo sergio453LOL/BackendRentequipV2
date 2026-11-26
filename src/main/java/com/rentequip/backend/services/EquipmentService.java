@@ -10,6 +10,7 @@ import com.rentequip.backend.enums.CatalogSort;
 import com.rentequip.backend.entities.Equipment;
 import com.rentequip.backend.entities.EquipmentCategory;
 import com.rentequip.backend.exceptions.DuplicateResourceException;
+import com.rentequip.backend.exceptions.EquipmentHasHistoryException;
 import com.rentequip.backend.exceptions.ForbiddenOperationException;
 import com.rentequip.backend.exceptions.InvalidOperationException;
 import com.rentequip.backend.exceptions.InvalidReservationDateException;
@@ -19,6 +20,8 @@ import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.repositories.PriceOfferRepository;
+import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -56,6 +59,8 @@ public class EquipmentService {
     private final EquipmentCategoryRepository categoryRepository;
     private final CompanyRepository companyRepository;
     private final ReservationRepository reservationRepository;
+    private final PriceOfferRepository offerRepository;
+    private final PurchaseRequestRepository purchaseRepository;
     private final EquipmentMapper equipmentMapper;
 
     /**
@@ -95,6 +100,12 @@ public class EquipmentService {
         Equipment equipment = findOrThrow(equipmentId);
         validateOwnership(equipment, actingCompanyId);
         validateNoActiveReservations(equipmentId);
+        // Past reservations, offers and purchases are both companies' records: keep the machine, inactive.
+        if (reservationRepository.existsByEquipmentId(equipmentId)
+                || offerRepository.existsByEquipmentId(equipmentId)
+                || purchaseRepository.existsByEquipmentId(equipmentId)) {
+            throw new EquipmentHasHistoryException(equipmentId);
+        }
         equipmentRepository.delete(equipment);
     }
 

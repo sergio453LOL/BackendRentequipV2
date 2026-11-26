@@ -12,6 +12,16 @@ public class VerificationCodeException extends RentEquipException {
         super(message, status, errorCode);
     }
 
+    /**
+     * The same failure answered with 400 instead of 401, for codes checked inside a signed-in session (profile
+     * changes): a 401 there would make the web think the session expired and sign the user out.
+     */
+    public static VerificationCodeException inSession(VerificationCodeException failure) {
+        return failure.getStatus() == HttpStatus.UNAUTHORIZED
+                ? new VerificationCodeException(failure.getMessage(), HttpStatus.BAD_REQUEST, failure.getErrorCode())
+                : failure;
+    }
+
     public static VerificationCodeException invalid(int attemptsLeft) {
         return new VerificationCodeException(attemptsLeft > 0
                 ? "El código no es correcto. Te quedan " + attemptsLeft + (attemptsLeft == 1 ? " intento." : " intentos.")

@@ -46,6 +46,19 @@ public class GlobalExceptionHandler {
         return build(exception.getStatus(), exception.getErrorCode(), exception.getMessage(), request, null);
     }
 
+    /** Same body as any domain error, plus Retry-After so clients know when to try again. */
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException exception,
+                                                               HttpServletRequest request) {
+        log.warn("Rate limit [{}] on {}: retry in {} s", exception.getErrorCode(), request.getRequestURI(),
+                exception.getRetryAfterSeconds());
+        ResponseEntity<ErrorResponse> response = build(exception.getStatus(), exception.getErrorCode(),
+                exception.getMessage(), request, null);
+        return ResponseEntity.status(response.getStatusCode())
+                .header("Retry-After", Long.toString(exception.getRetryAfterSeconds()))
+                .body(response.getBody());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleBodyValidation(MethodArgumentNotValidException exception,
                                                              HttpServletRequest request) {

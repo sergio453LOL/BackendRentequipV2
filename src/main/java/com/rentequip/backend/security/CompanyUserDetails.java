@@ -32,7 +32,8 @@ public record CompanyUserDetails(
                 user.getPassword(),
                 user.getCompany().getId(),
                 user.getRole(),
-                user.isEnabled()
+                // A deactivated company takes its users with it: none of them can sign in or refresh.
+                user.isEnabled() && user.getCompany().isActive()
         );
     }
 

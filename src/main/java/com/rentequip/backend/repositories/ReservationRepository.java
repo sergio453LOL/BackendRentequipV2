@@ -104,6 +104,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     Page<Reservation> findByEquipmentId(Long equipmentId, Pageable pageable);
 
+    boolean existsByEquipmentId(Long equipmentId);
+
     long countByEquipmentOwnerIdAndStatusIn(Long ownerId, Collection<ReservationStatus> statuses);
 
     long countByRenterIdAndStatusIn(Long renterId, Collection<ReservationStatus> statuses);
