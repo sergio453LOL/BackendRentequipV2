@@ -25,9 +25,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EquipmentCategoryController {
 
+    /**
+     * Categories are shared by every company, so a company ADMIN is not enough: only a platform admin
+     * (PLATFORM_ADMIN_EMAILS, see {@link com.rentequip.backend.security.PlatformAdmins}) changes them.
+     */
+    static final String PLATFORM_ADMIN = "hasRole('ADMIN') and @platformAdmins.includes(authentication)";
+
     private final EquipmentCategoryService categoryService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(PLATFORM_ADMIN)
     @PostMapping
     public ResponseEntity<EquipmentCategoryResponse> create(
             @Valid @RequestBody EquipmentCategoryCreateRequest request,
@@ -48,7 +54,7 @@ public class EquipmentCategoryController {
         return ResponseEntity.ok(categoryService.findById(id));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(PLATFORM_ADMIN)
     @PutMapping("/{id}")
     public ResponseEntity<EquipmentCategoryResponse> update(
             @PathVariable Long id,
@@ -56,7 +62,7 @@ public class EquipmentCategoryController {
         return ResponseEntity.ok(categoryService.update(id, request));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(PLATFORM_ADMIN)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         categoryService.delete(id);

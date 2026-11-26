@@ -2,6 +2,8 @@ package com.rentequip.backend.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rentequip.backend.entities.EquipmentCategory;
+import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,9 @@ class PurchaseTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private EquipmentCategoryRepository categoryRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private String ownerToken;
@@ -50,11 +55,10 @@ class PurchaseTest {
         ownerToken = owner.get("accessToken").asText();
         renterToken = renter.get("accessToken").asText();
 
-        long categoryId = readId(mockMvc.perform(post("/api/v1/equipment-categories")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Rodillos " + n + "\"}"))
-                .andExpect(status().isCreated()));
+        // Categories are shared by every company and only a platform admin changes them through the API.
+        EquipmentCategory category = new EquipmentCategory();
+        category.setName("Rodillos " + n);
+        long categoryId = categoryRepository.save(category).getId();
 
         // 900 a day with no deposit, so three days of rent are exactly 2700.
         equipmentId = readId(mockMvc.perform(post("/api/v1/equipment")

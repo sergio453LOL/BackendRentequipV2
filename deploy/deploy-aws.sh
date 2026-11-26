@@ -26,6 +26,7 @@
 #   3j. (opcional) export APISPERU_TOKEN=...  # apisperu (RUC/DNI), se consulta antes que decolecta
 #   3k. (opcional) export GOOGLE_CLIENT_ID=...apps.googleusercontent.com  # "Continuar con Google" (Client ID web, público)
 #   3l. (opcional) export RECAPTCHA_SECRET=...  # reCAPTCHA v3 del login web (clave secreta)
+#   3m. (opcional) export PLATFORM_ADMIN_EMAILS=tu@correo.pe  # quienes gestionan las categorías (separados por coma)
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -191,6 +192,7 @@ Environment="IDENTITY_API_TOKEN=${IDENTITY_API_TOKEN:-}"
 Environment="APISPERU_TOKEN=${APISPERU_TOKEN:-}"
 Environment="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}"
 Environment="RECAPTCHA_SECRET=${RECAPTCHA_SECRET:-}"
+Environment="PLATFORM_ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS:-}"
 Environment="GEMINI_API_KEY=${GEMINI_API_KEY:-}"
 Environment="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}"
 

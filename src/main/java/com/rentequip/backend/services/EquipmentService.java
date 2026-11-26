@@ -58,9 +58,17 @@ public class EquipmentService {
     private final ReservationRepository reservationRepository;
     private final EquipmentMapper equipmentMapper;
 
+    /**
+     * The machine always belongs to the caller's company. The ownerCompanyId of the payload is only accepted
+     * when it names that same company: anything else would publish a machine in another tenant's name.
+     */
     @Transactional
     public EquipmentResponse create(EquipmentCreateRequest request) {
-        Company owner = findCompanyOrThrow(request.ownerCompanyId());
+        Long actingCompanyId = currentUser.requireCompanyId();
+        if (request.ownerCompanyId() != null && !request.ownerCompanyId().equals(actingCompanyId)) {
+            throw new ForbiddenOperationException("You can only publish equipment for your own company");
+        }
+        Company owner = findCompanyOrThrow(actingCompanyId);
         validateSerialNumberIsFree(request.serialNumber(), null);
         Set<EquipmentCategory> categories = resolveCategories(request.categoryIds());
 

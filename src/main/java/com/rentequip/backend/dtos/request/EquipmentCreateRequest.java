@@ -69,7 +69,10 @@ public record EquipmentCreateRequest(
         @NotEmpty
         Set<@NotNull Long> categoryIds,
 
-        @NotNull
+        /**
+         * Optional. The owner is always the caller's company; a different company here is refused with 403,
+         * so nobody can publish a machine in another company's name.
+         */
         Long ownerCompanyId,
 
         /** Optional; absent means the rate does not include an operator. */
