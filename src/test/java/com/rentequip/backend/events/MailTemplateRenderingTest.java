@@ -67,7 +67,7 @@ class MailTemplateRenderingTest {
 
     private ReservationSnapshot snapshot() {
         return new ReservationSnapshot(
-                42L, 7L, "Excavadora CAT 320",
+                42L, 7L, "Excavadora CAT 320", "Av. Argentina 1234, Lima",
                 1L, "Constructora Andina", "owner@rentequip.pe",
                 2L, "Contratista Sur", "renter@rentequip.pe",
                 LocalDate.of(2026, 10, 15), LocalDate.of(2026, 10, 19), 5,

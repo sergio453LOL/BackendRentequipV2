@@ -60,10 +60,16 @@ public class ReservationNotificationListener {
         model.put("previousStatus", event.previousStatus());
 
         switch (event.newStatus()) {
-            case CONFIRMED -> emailService.send(reservation.renterEmail(),
-                    "Tu reserva de " + reservation.equipmentName() + " fue confirmada",
-                    "reservation-confirmed", model);
-            case CANCELLED, REJECTED -> notifyBothParties(reservation, model, event.newStatus());
+            case CONFIRMED -> {
+                // The renter gets the rental days in their calendar: as an invitation and as a Google link.
+                model.put("calendarUrl", ReservationCalendar.googleCalendarUrl(reservation));
+                emailService.send(reservation.renterEmail(),
+                        "Tu reserva de " + reservation.equipmentName() + " fue confirmada",
+                        "reservation-confirmed", model,
+                        ReservationCalendar.invite(reservation, emailService.fromAddress()));
+            }
+            case CANCELLED, REJECTED -> notifyBothParties(reservation, model, event.newStatus(),
+                    wasOnTheCalendar(event.previousStatus()));
             case COMPLETED -> emailService.send(reservation.renterEmail(),
                     "Alquiler finalizado: cuéntanos cómo te fue",
                     "reservation-completed", model);
@@ -71,12 +77,19 @@ public class ReservationNotificationListener {
         }
     }
 
+    /** Confirmed and running reservations were sent as calendar invitations; earlier ones never were. */
+    private static boolean wasOnTheCalendar(ReservationStatus previousStatus) {
+        return previousStatus == ReservationStatus.CONFIRMED || previousStatus == ReservationStatus.IN_PROGRESS;
+    }
+
     private void notifyBothParties(ReservationSnapshot reservation, Map<String, Object> model,
-                                   ReservationStatus status) {
+                                   ReservationStatus status, boolean removeFromCalendar) {
         String subject = status == ReservationStatus.REJECTED
                 ? "Tu solicitud de alquiler fue rechazada"
                 : "La reserva de " + reservation.equipmentName() + " fue cancelada";
-        emailService.send(reservation.renterEmail(), subject, "reservation-cancelled", model);
+        // A cancelled confirmation also takes the event off the renter's calendar (same UID, METHOD:CANCEL).
+        emailService.send(reservation.renterEmail(), subject, "reservation-cancelled", model,
+                removeFromCalendar ? ReservationCalendar.cancellation(reservation, emailService.fromAddress()) : null);
         emailService.send(reservation.ownerEmail(), subject, "reservation-cancelled", model);
     }
 
