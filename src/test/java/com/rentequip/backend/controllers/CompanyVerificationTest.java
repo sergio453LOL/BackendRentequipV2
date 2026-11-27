@@ -73,6 +73,23 @@ class CompanyVerificationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void theProfileSaysWhoIsAPlatformAdmin() throws Exception {
+        JsonNode tenant = register(validRuc("2063456789"), "tenant@verify.pe");
+        JsonNode platform = register(validRuc("2064567890"), "panel@rentequip.test");
+
+        // Every company's own ADMIN is not a platform admin; only the emails in PLATFORM_ADMIN_EMAILS are.
+        me(tenant).andExpect(jsonPath("$.role").value("ADMIN")).andExpect(jsonPath("$.platformAdmin").value(false));
+        me(platform).andExpect(jsonPath("$.role").value("ADMIN")).andExpect(jsonPath("$.platformAdmin").value(true));
+    }
+
+    private ResultActions me(JsonNode session) throws Exception {
+        return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + session.get("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
     private static RucInfo sunat(String ruc, String state, String condition) {
         return new RucInfo(ruc, "CONSTRUCTORA PRUEBA S.A.C.", state, condition, "AV. LIMA 123", "LIMA", "LIMA",
                 "LIMA", RucValidator.RucType.LEGAL_ENTITY);

@@ -20,6 +20,11 @@ public record UserResponse(
         /** Null when the two-step verification is off. */
         TwoFactorChannel twoFactorChannel,
         /** False for an account created with Google that never set a password: it confirms changes by email code. */
-        boolean passwordSet
+        boolean passwordSet,
+        /**
+         * An ADMIN whose email is in PLATFORM_ADMIN_EMAILS: an operator of the marketplace, not only of its own
+         * company. The web shows the platform panel only to them; the API still checks every call.
+         */
+        boolean platformAdmin
 ) {
 }

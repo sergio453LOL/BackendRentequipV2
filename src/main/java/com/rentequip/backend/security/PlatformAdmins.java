@@ -36,7 +36,11 @@ public class PlatformAdmins {
     public boolean includes(Authentication authentication) {
         return authentication != null
                 && authentication.getPrincipal() instanceof CompanyUserDetails principal
-                && principal.email() != null
-                && emails.contains(principal.email().toLowerCase(Locale.ROOT));
+                && includesEmail(principal.email());
+    }
+
+    /** Whether the address is on the list. The ADMIN role is checked apart, as {@link #EXPRESSION} does. */
+    public boolean includesEmail(String email) {
+        return email != null && emails.contains(email.toLowerCase(Locale.ROOT));
     }
 }
