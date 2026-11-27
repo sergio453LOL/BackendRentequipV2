@@ -66,6 +66,22 @@ class AssistantGuardrailsTest {
     }
 
     @Test
+    void eachDemoVisitGetsItsOwnBudgetUnderTheSameDailyCap() {
+        AssistantQuota quota = new AssistantQuota(2, 3, 5, new MutableClock());
+
+        // The shared demo account (user 9): one visitor uses up the per-minute budget...
+        assertThat(quota.tryAcquire(9L, "visit-a")).isTrue();
+        assertThat(quota.tryAcquire(9L, "visit-a")).isTrue();
+        assertThat(quota.tryAcquire(9L, "visit-a")).isFalse();
+        // ...and the next visitor still gets answers from the model.
+        assertThat(quota.tryAcquire(9L, "visit-b")).isTrue();
+        assertThat(quota.tryAcquire(9L, "visit-b")).isTrue();
+        // The platform's daily cap of 5 still holds across all visits.
+        assertThat(quota.tryAcquire(9L, "visit-c")).isTrue();
+        assertThat(quota.tryAcquire(9L, "visit-d")).isFalse();
+    }
+
+    @Test
     void quotaStopsBurstsAndTheDailyBudget() {
         MutableClock clock = new MutableClock();
         AssistantQuota quota = new AssistantQuota(2, 3, 4, clock);

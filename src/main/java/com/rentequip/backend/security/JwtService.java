@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -27,6 +28,8 @@ public class JwtService {
     public static final String CLAIM_COMPANY_ID = "companyId";
     public static final String CLAIM_ROLE = "role";
     public static final String CLAIM_TOKEN_TYPE = "type";
+    /** Only on tokens of the one-click demo: a random id per visit, so per-user limits apply per visitor. */
+    public static final String CLAIM_DEMO_SESSION = "dsid";
 
     private static final String ACCESS_TOKEN = "access";
     private static final String REFRESH_TOKEN = "refresh";
@@ -50,12 +53,16 @@ public class JwtService {
     }
 
     public String generateAccessToken(CompanyUserDetails user) {
-        return buildToken(user, ACCESS_TOKEN, Instant.now().plus(accessTokenTtl));
+        return generateAccessToken(user, null);
+    }
+
+    public String generateAccessToken(CompanyUserDetails user, String demoSession) {
+        return buildToken(user, ACCESS_TOKEN, Instant.now().plus(accessTokenTtl), demoSession);
     }
 
     /** The refresh token of a fresh login: the session it opens ends {@code session-hours} from now. */
     public String generateRefreshToken(CompanyUserDetails user) {
-        return buildToken(user, REFRESH_TOKEN, Instant.now().plus(sessionTtl));
+        return generateRefreshToken(user, Instant.now().plus(sessionTtl), null);
     }
 
     /**
@@ -63,7 +70,22 @@ public class JwtService {
      * it never extends the session, so after {@code session-hours} the user signs in again, however active.
      */
     public String generateRefreshToken(CompanyUserDetails user, Instant sessionExpiresAt) {
-        return buildToken(user, REFRESH_TOKEN, sessionExpiresAt);
+        return generateRefreshToken(user, sessionExpiresAt, null);
+    }
+
+    /** A refresh token that also carries the demo visit it continues (null outside the demo). */
+    public String generateRefreshToken(CompanyUserDetails user, Instant sessionExpiresAt, String demoSession) {
+        return buildToken(user, REFRESH_TOKEN, sessionExpiresAt, demoSession);
+    }
+
+    /** Expiry of a brand-new session, for tokens issued outside {@link #generateRefreshToken(CompanyUserDetails)}. */
+    public Instant newSessionExpiry() {
+        return Instant.now().plus(sessionTtl);
+    }
+
+    /** The demo visit id of a token, or null for every normal session. */
+    public String demoSession(Claims claims) {
+        return claims.get(CLAIM_DEMO_SESSION, String.class);
     }
 
     public long accessTokenSeconds() {
@@ -105,16 +127,20 @@ public class JwtService {
         );
     }
 
-    private String buildToken(CompanyUserDetails user, String tokenType, Instant expiresAt) {
+    private String buildToken(CompanyUserDetails user, String tokenType, Instant expiresAt, String demoSession) {
         Instant now = Instant.now();
+        Map<String, Object> claims = new HashMap<>(Map.of(
+                CLAIM_USER_ID, user.userId(),
+                CLAIM_EMAIL, user.email(),
+                CLAIM_COMPANY_ID, user.companyId(),
+                CLAIM_ROLE, user.role().name(),
+                CLAIM_TOKEN_TYPE, tokenType));
+        if (demoSession != null) {
+            claims.put(CLAIM_DEMO_SESSION, demoSession);
+        }
         return Jwts.builder()
                 .subject(user.email())
-                .claims(Map.of(
-                        CLAIM_USER_ID, user.userId(),
-                        CLAIM_EMAIL, user.email(),
-                        CLAIM_COMPANY_ID, user.companyId(),
-                        CLAIM_ROLE, user.role().name(),
-                        CLAIM_TOKEN_TYPE, tokenType))
+                .claims(claims)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))
                 .signWith(signingKey)

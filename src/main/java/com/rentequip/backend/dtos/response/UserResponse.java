@@ -25,6 +25,8 @@ public record UserResponse(
          * An ADMIN whose email is in PLATFORM_ADMIN_EMAILS: an operator of the marketplace, not only of its own
          * company. The web shows the platform panel only to them; the API still checks every call.
          */
-        boolean platformAdmin
+        boolean platformAdmin,
+        /** The shared account of the one-click demo: the web shows a banner and its settings are read-only. */
+        boolean demoAccount
 ) {
 }

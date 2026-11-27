@@ -33,7 +33,8 @@ public class AssistantQuota {
     private final int perDay;
     private final Clock clock;
 
-    private final Map<Long, Deque<Instant>> callsByUser = new ConcurrentHashMap<>();
+    /** Keyed by user, or by user and demo visit: the shared demo account gets one budget per visitor. */
+    private final Map<String, Deque<Instant>> callsByUser = new ConcurrentHashMap<>();
     private LocalDate today;
     private int callsToday;
 
@@ -53,8 +54,18 @@ public class AssistantQuota {
 
     /** Takes one model call from the user's and the platform's budget; false when either is used up. */
     public boolean tryAcquire(Long userId) {
+        return tryAcquire(userId, null);
+    }
+
+    /**
+     * Same, for a visit of the shared demo account ({@code demoSession} from its token): every visitor gets
+     * the per-user budget of their own, so an auditorium trying the demo at once does not use up one
+     * budget in a minute. The daily platform limit still caps the total cost.
+     */
+    public boolean tryAcquire(Long userId, String demoSession) {
         Instant now = clock.instant();
-        Deque<Instant> calls = callsByUser.computeIfAbsent(userId, id -> new ArrayDeque<>());
+        String key = demoSession == null ? String.valueOf(userId) : userId + ":" + demoSession;
+        Deque<Instant> calls = callsByUser.computeIfAbsent(key, id -> new ArrayDeque<>());
         synchronized (calls) {
             while (!calls.isEmpty() && calls.peekFirst().isBefore(now.minus(Duration.ofHours(1)))) {
                 calls.pollFirst();

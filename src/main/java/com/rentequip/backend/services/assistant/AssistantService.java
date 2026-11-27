@@ -72,7 +72,7 @@ public class AssistantService {
         Supplier<AssistantChatResponse> localSearch = () ->
                 toResponse(keywordRecommender.recommend(last.content(), catalog), catalog, "catalog-search");
         boolean modelConfigured = geminiAdvisor.isEnabled() || claudeAdvisor.isEnabled();
-        if (!modelConfigured || !quota.tryAcquire(currentUser.requireUserId())) {
+        if (!modelConfigured || !quota.tryAcquire(currentUser.requireUserId(), currentUser.demoSession())) {
             return localSearch.get();
         }
 

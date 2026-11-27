@@ -1,6 +1,8 @@
 package com.rentequip.backend.controllers;
 
 import com.rentequip.backend.exceptions.ResourceNotFoundException;
+import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import com.rentequip.backend.services.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
@@ -31,11 +33,15 @@ public class UploadController {
     private static final Pattern DEMO_MANUAL_NAME = Pattern.compile("^[a-z0-9-]+\\.pdf$");
 
     private final ImageStorageService imageStorageService;
+    private final CurrentUser currentUser;
+    private final DemoAccess demoAccess;
 
     /** Uploads one equipment photo and returns the public URL to put in the equipment's imageUrls. */
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @PostMapping(path = "/api/v1/uploads/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        // The shared demo account cannot store files: nothing a visitor uploads would be seen by the next.
+        demoAccess.forbidChangesBy(currentUser.require());
         String storedName = imageStorageService.store(file);
         String url = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/uploads/{name}").buildAndExpand(storedName).toUriString();

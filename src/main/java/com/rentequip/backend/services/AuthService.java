@@ -168,7 +168,10 @@ public class AuthService {
         if (!principal.isEnabled()) {
             throw new UnauthorizedException("This account has been disabled");
         }
-        return issueTokens(principal, companyNameOf(principal));
+        // A random id per visit: the assistant's per-user limits then apply to each visitor, not to all of them.
+        String demoSession = java.util.UUID.randomUUID().toString();
+        return issueTokens(principal, companyNameOf(principal),
+                jwtService.generateRefreshToken(principal, jwtService.newSessionExpiry(), demoSession), demoSession);
     }
 
     /**
@@ -200,8 +203,9 @@ public class AuthService {
             throw new UnauthorizedException("This account has been disabled");
         }
         // The new refresh token inherits the session's expiry, so a session lasts a fixed time from login.
-        String refreshToken = jwtService.generateRefreshToken(principal, claims.getExpiration().toInstant());
-        return issueTokens(principal, companyNameOf(principal), refreshToken);
+        String demoSession = jwtService.demoSession(claims);
+        String refreshToken = jwtService.generateRefreshToken(principal, claims.getExpiration().toInstant(), demoSession);
+        return issueTokens(principal, companyNameOf(principal), refreshToken, demoSession);
     }
 
     private CompanyUserDetails authenticate(LoginRequest request) {
@@ -239,8 +243,13 @@ public class AuthService {
     }
 
     private AuthResponse issueTokens(CompanyUserDetails principal, String companyName, String refreshToken) {
+        return issueTokens(principal, companyName, refreshToken, null);
+    }
+
+    private AuthResponse issueTokens(CompanyUserDetails principal, String companyName, String refreshToken,
+                                     String demoSession) {
         return new AuthResponse(
-                jwtService.generateAccessToken(principal),
+                jwtService.generateAccessToken(principal, demoSession),
                 refreshToken,
                 AuthResponse.BEARER,
                 jwtService.accessTokenSeconds(),

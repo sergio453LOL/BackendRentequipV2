@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,9 +52,31 @@ class DemoLoginTest {
                 .andReturn().getResponse().getContentAsString());
         String bearer = "Bearer " + demo.get("accessToken").asText();
 
-        // Using the product works.
+        // Using the product works, and the profile says it is the demo account (the web shows a banner).
         mockMvc.perform(get("/api/v1/users/me").header(HttpHeaders.AUTHORIZATION, bearer))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.demoAccount").value(true));
+
+        // Nothing it publishes would reach the public catalogue: listing changes are refused too.
+        mockMvc.perform(delete("/api/v1/equipment/{id}", 999_999).header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("DEMO_ACCOUNT_LOCKED"));
+
+        // Only a platform admin resets it.
+        mockMvc.perform(post("/api/v1/admin/demo/reset").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden());
+        JsonNode admin = objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"company":{"name":"Plataforma Reset SAC","taxId":"20666666667","email":"reset@rentequip.test",
+                                  "city":"Lima","latitude":-12.0463731,"longitude":-77.0427934},
+                                 "firstName":"Ana","lastName":"Reset","email":"reset@rentequip.test","password":"Password123"}"""))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        mockMvc.perform(post("/api/v1/admin/demo/reset")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin.get("accessToken").asText()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reservations").value(0));
 
         // Locking the next visitor out does not.
         mockMvc.perform(post("/api/v1/users/me/password").header(HttpHeaders.AUTHORIZATION, bearer)

@@ -20,6 +20,7 @@ import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.EquipmentCategoryRepository;
 import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import com.rentequip.backend.repositories.PriceOfferRepository;
 import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
@@ -62,6 +63,7 @@ public class EquipmentService {
     private final PriceOfferRepository offerRepository;
     private final PurchaseRequestRepository purchaseRepository;
     private final EquipmentMapper equipmentMapper;
+    private final DemoAccess demoAccess;
 
     /**
      * The machine always belongs to the caller's company. The ownerCompanyId of the payload is only accepted
@@ -69,6 +71,7 @@ public class EquipmentService {
      */
     @Transactional
     public EquipmentResponse create(EquipmentCreateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Long actingCompanyId = currentUser.requireCompanyId();
         if (request.ownerCompanyId() != null && !request.ownerCompanyId().equals(actingCompanyId)) {
             throw new ForbiddenOperationException("You can only publish equipment for your own company");
@@ -83,6 +86,7 @@ public class EquipmentService {
 
     @Transactional
     public EquipmentResponse update(Long equipmentId, EquipmentUpdateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Long actingCompanyId = currentUser.requireCompanyId();
         Equipment equipment = findOrThrow(equipmentId);
         validateOwnership(equipment, actingCompanyId);
@@ -96,6 +100,7 @@ public class EquipmentService {
 
     @Transactional
     public void delete(Long equipmentId) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Long actingCompanyId = currentUser.requireCompanyId();
         Equipment equipment = findOrThrow(equipmentId);
         validateOwnership(equipment, actingCompanyId);
