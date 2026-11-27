@@ -10,6 +10,7 @@ import com.rentequip.backend.dtos.response.UserResponse;
 import com.rentequip.backend.entities.Company;
 import com.rentequip.backend.entities.User;
 import com.rentequip.backend.enums.UserRole;
+import com.rentequip.backend.security.DemoAccess;
 import com.rentequip.backend.security.PlatformAdmins;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     private final PlatformAdmins platformAdmins;
+    private final DemoAccess demoAccess;
 
     /**
      * The password must already be encoded (BCrypt) by the service layer.
@@ -65,7 +67,8 @@ public class UserMapper {
                 user.getCreatedAt(),
                 user.getTwoFactorChannel(),
                 user.hasPassword(),
-                user.getRole() == UserRole.ADMIN && platformAdmins.includesEmail(user.getEmail())
+                user.getRole() == UserRole.ADMIN && platformAdmins.includesEmail(user.getEmail()),
+                demoAccess.isDemoAccount(user.getEmail())
         );
     }
 }

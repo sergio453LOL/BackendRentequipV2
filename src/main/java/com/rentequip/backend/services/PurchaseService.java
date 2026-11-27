@@ -29,6 +29,7 @@ import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.repositories.PurchaseRequestRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,10 +69,12 @@ public class PurchaseService {
     private final EquipmentMapper equipmentMapper;
     private final PaymentGateway paymentGateway;
     private final CurrentUser currentUser;
+    private final DemoAccess demoAccess;
 
     /** The owner sets, changes or (with a null price) removes the sale terms of one of its machines. */
     @Transactional
     public EquipmentResponse updateSaleTerms(Long equipmentId, EquipmentSaleRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Equipment equipment = equipmentRepository.findById(equipmentId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Equipment", equipmentId));
         if (!equipment.getOwner().getId().equals(currentUser.requireCompanyId())) {

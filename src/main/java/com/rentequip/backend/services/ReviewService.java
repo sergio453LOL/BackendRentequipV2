@@ -16,6 +16,7 @@ import com.rentequip.backend.repositories.EquipmentRepository;
 import com.rentequip.backend.repositories.ReservationRepository;
 import com.rentequip.backend.repositories.ReviewRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,9 +31,11 @@ public class ReviewService {
     private final ReservationRepository reservationRepository;
     private final EquipmentRepository equipmentRepository;
     private final ReviewMapper reviewMapper;
+    private final DemoAccess demoAccess;
 
     @Transactional
     public ReviewResponse create(ReviewCreateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Long actingCompanyId = currentUser.requireCompanyId();
         Reservation reservation = reservationRepository.findDetailedById(request.reservationId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Reservation", request.reservationId()));

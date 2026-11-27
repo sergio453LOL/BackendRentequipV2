@@ -49,6 +49,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        // The demo visit travels as a request attribute; CurrentUser.demoSession() reads it.
+        String demoSession = jwtService.demoSession(claims);
+        if (demoSession != null) {
+            request.setAttribute(CurrentUser.DEMO_SESSION_ATTRIBUTE, demoSession);
+        }
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
