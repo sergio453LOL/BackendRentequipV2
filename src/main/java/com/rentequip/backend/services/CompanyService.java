@@ -11,6 +11,7 @@ import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.mappers.CompanyMapper;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final CurrentUser currentUser;
     private final CompanyMapper companyMapper;
+    private final DemoAccess demoAccess;
 
     @Transactional
     public CompanyResponse create(CompanyCreateRequest request) {
@@ -43,6 +45,7 @@ public class CompanyService {
 
     @Transactional
     public CompanyResponse update(Long companyId, CompanyUpdateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Company company = findOrThrow(companyId);
         validateSelfService(companyId, currentUser.requireCompanyId());
         if (request.email() != null) {
@@ -57,6 +60,7 @@ public class CompanyService {
      */
     @Transactional
     public void deactivate(Long companyId) {
+        demoAccess.forbidChangesBy(currentUser.require());
         Company company = findOrThrow(companyId);
         validateSelfService(companyId, currentUser.requireCompanyId());
         company.setActive(false);

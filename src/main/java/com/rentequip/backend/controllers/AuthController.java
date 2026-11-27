@@ -63,6 +63,12 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerWithGoogle(request));
     }
 
+    /** One-click demo: tokens of the shared demo renter, or 404 when the demo entrance is closed. */
+    @PostMapping("/demo")
+    public ResponseEntity<AuthResponse> loginAsDemo() {
+        return ResponseEntity.ok(authService.loginAsDemo());
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refresh(request));
