@@ -27,6 +27,7 @@
 #   3k. (opcional) export GOOGLE_CLIENT_ID=...apps.googleusercontent.com  # "Continuar con Google" (Client ID web, público)
 #   3l. (opcional) export RECAPTCHA_SECRET=...  # reCAPTCHA v3 del login web (clave secreta)
 #   3m. (opcional) export PLATFORM_ADMIN_EMAILS=tu@correo.pe  # quienes gestionan las categorías (separados por coma)
+#   3n. (opcional) export DEMO_LOGIN_EMAIL=demo@empresa.pe  # cuenta del botón "Probar la demo" (sin contraseña)
 #   4. bash deploy/deploy-aws.sh
 #
 set -euo pipefail
@@ -193,6 +194,7 @@ Environment="APISPERU_TOKEN=${APISPERU_TOKEN:-}"
 Environment="GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}"
 Environment="RECAPTCHA_SECRET=${RECAPTCHA_SECRET:-}"
 Environment="PLATFORM_ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS:-}"
+Environment="DEMO_LOGIN_EMAIL=${DEMO_LOGIN_EMAIL:-}"
 Environment="GEMINI_API_KEY=${GEMINI_API_KEY:-}"
 Environment="ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}"
 

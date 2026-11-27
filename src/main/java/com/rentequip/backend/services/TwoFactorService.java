@@ -18,6 +18,7 @@ import com.rentequip.backend.notifications.SmsGatewayClient;
 import com.rentequip.backend.repositories.UserRepository;
 import com.rentequip.backend.repositories.VerificationCodeRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class TwoFactorService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final SmsGatewayClient smsGatewayClient;
+    private final DemoAccess demoAccess;
 
     /** Called by the login once the password matched, for a user who has the protection on. */
     @Transactional
@@ -74,11 +76,13 @@ public class TwoFactorService {
     /** Sends a code to the chosen channel; the protection is only turned on once that code comes back. */
     @Transactional
     public TwoFactorChallengeResponse startSetup(TwoFactorSetupRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         return sendCode(me(), VerificationPurpose.SETUP, request.channel());
     }
 
     @Transactional(noRollbackFor = RentEquipException.class)
     public UserResponse confirmSetup(TwoFactorVerifyRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = me();
         VerificationCode code = codeRepository.findByChallengeId(request.challengeId())
                 .filter(found -> found.getUser().getId().equals(user.getId()))
@@ -95,6 +99,7 @@ public class TwoFactorService {
      */
     @Transactional(noRollbackFor = VerificationCodeException.class)
     public UserResponse disable(TwoFactorDisableRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = me();
         if (user.hasPassword()) {
             if (request.password() == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -113,6 +118,7 @@ public class TwoFactorService {
      */
     @Transactional
     public TwoFactorChallengeResponse startAccountCode() {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = me();
         if (user.hasPassword()) {
             throw new InvalidOperationException("Tu cuenta tiene contraseña: úsala para confirmar el cambio.");

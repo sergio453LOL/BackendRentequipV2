@@ -14,11 +14,13 @@ import com.rentequip.backend.entities.User;
 import com.rentequip.backend.enums.UserRole;
 import com.rentequip.backend.exceptions.DuplicateResourceException;
 import com.rentequip.backend.exceptions.GoogleSignInException;
+import com.rentequip.backend.exceptions.ResourceNotFoundException;
 import com.rentequip.backend.exceptions.UnauthorizedException;
 import com.rentequip.backend.repositories.UserRepository;
 import com.rentequip.backend.security.AbuseGuard;
 import com.rentequip.backend.security.CompanyUserDetails;
 import com.rentequip.backend.security.CustomUserDetailsService;
+import com.rentequip.backend.security.DemoAccess;
 import com.rentequip.backend.security.GoogleIdTokenVerifier;
 import com.rentequip.backend.security.GoogleIdTokenVerifier.GoogleIdentity;
 import com.rentequip.backend.security.JwtService;
@@ -56,6 +58,7 @@ public class AuthService {
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
     private final RecaptchaVerifier recaptchaVerifier;
     private final AbuseGuard abuseGuard;
+    private final DemoAccess demoAccess;
 
     /** A login ends either with the tokens or, when the two-step verification is on, with a code sent. */
     public record LoginOutcome(AuthResponse tokens, TwoFactorChallengeResponse challenge) {
@@ -144,6 +147,28 @@ public class AuthService {
             return new LoginOutcome(null, twoFactorService.startLogin(user));
         }
         return new LoginOutcome(issueTokens(principal, companyNameOf(principal)), null);
+    }
+
+    /**
+     * One-click entrance as the shared demo renter (DEMO_LOGIN_EMAIL), for visitors who will not register a
+     * company to try the product. No password travels: the account is fixed on the server, and DemoAccess
+     * keeps it from changing anything that would lock the next visitor out. Closed (404) when not set.
+     */
+    @Transactional(readOnly = true)
+    public AuthResponse loginAsDemo() {
+        if (!demoAccess.isEnabled()) {
+            throw new ResourceNotFoundException("The demo entrance is not enabled");
+        }
+        CompanyUserDetails principal;
+        try {
+            principal = userDetailsService.loadUserByUsername(demoAccess.email());
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException missing) {
+            throw new ResourceNotFoundException("The demo account does not exist");
+        }
+        if (!principal.isEnabled()) {
+            throw new UnauthorizedException("This account has been disabled");
+        }
+        return issueTokens(principal, companyNameOf(principal));
     }
 
     /**

@@ -19,6 +19,7 @@ import com.rentequip.backend.mappers.UserMapper;
 import com.rentequip.backend.repositories.CompanyRepository;
 import com.rentequip.backend.repositories.UserRepository;
 import com.rentequip.backend.security.CurrentUser;
+import com.rentequip.backend.security.DemoAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,9 +37,11 @@ public class UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final TwoFactorService twoFactorService;
+    private final DemoAccess demoAccess;
 
     @Transactional
     public UserResponse create(UserCreateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         validateEmailIsFree(request.email(), null);
         validateBelongsToCallerCompany(request.companyId());
         Company company = findCompanyOrThrow(request.companyId());
@@ -48,6 +51,7 @@ public class UserService {
 
     @Transactional
     public UserResponse update(Long userId, UserUpdateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = findOrThrow(userId);
         validateSameCompany(user, currentUser.requireCompanyId());
         if (request.role() != null) {
@@ -67,6 +71,7 @@ public class UserService {
      */
     @Transactional
     public UserResponse updateMe(ProfileUpdateRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = findOrThrow(currentUser.requireUserId());
         userMapper.applyProfile(user, request);
         return userMapper.toResponse(user);
@@ -79,6 +84,7 @@ public class UserService {
      */
     @Transactional(noRollbackFor = VerificationCodeException.class)
     public void changeMyPassword(PasswordChangeRequest request) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = findOrThrow(currentUser.requireUserId());
         if (user.hasPassword()) {
             if (request.currentPassword() == null
@@ -97,6 +103,7 @@ public class UserService {
 
     @Transactional
     public void disable(Long userId) {
+        demoAccess.forbidChangesBy(currentUser.require());
         User user = findOrThrow(userId);
         validateSameCompany(user, currentUser.requireCompanyId());
         validateCompanyKeepsAnAdmin(user, UserRole.OPERATOR);
